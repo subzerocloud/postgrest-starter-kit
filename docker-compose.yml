@@ -6,12 +6,13 @@ services:
   # # After after some processing/checks and transformation, the request is forwarded
   # # to PostgREST down the stack.
   openresty:
-    image: openresty/openresty
+    image: openresty/openresty:jessie
     ports:
       - "8080:80"
     links:
       - db:db
       - postgrest:postgrest
+    entrypoint: /entrypoint.sh
     environment:
       - JWT_SECRET=${JWT_SECRET}
       - DEVELOPMENT=${DEVELOPMENT}
@@ -24,6 +25,7 @@ services:
       - DB_USER=${DB_USER}
       - DB_PASS=${DB_PASS}
     volumes:
+      - "./openresty/entrypoint.sh:/entrypoint.sh"
       - "./openresty/nginx/conf/nginx.conf:/usr/local/openresty/nginx/conf/nginx.conf"
       - "./openresty/nginx/conf/includes:/usr/local/openresty/nginx/conf/includes"
       - "./openresty/nginx/html:/usr/local/openresty/nginx/html"
