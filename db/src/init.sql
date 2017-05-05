@@ -32,5 +32,11 @@ begin;
 
 -- include some sample data
 \ir sample_data/data.sql
+
+-- app secrets
+\set jwt_secret `echo $JWT_SECRET`
+\set quoted_jwt_secret '\'' :jwt_secret '\''
+insert into data.secrets (key, value) values ('jwt_secret', :quoted_jwt_secret);
+
 commit;
 \echo # ==========================================

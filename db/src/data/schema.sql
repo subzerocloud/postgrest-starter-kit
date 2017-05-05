@@ -5,3 +5,4 @@ create schema data;
 \ir users.sql
 \ir items.sql
 \ir subitems.sql
+\ir secrets.sql
