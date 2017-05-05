@@ -10,3 +10,4 @@ end
 if type(hooks.on_init) == 'function' then
 	hooks.on_init()
 end
+
