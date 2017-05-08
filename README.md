@@ -9,10 +9,10 @@ backends with [PostgREST](https://postgrest.com).
 ✓ [PostgreSQL](https://www.postgresql.org/) database schema boilerplate with authentication and authorization flow<br>
 ✓ [OpenResty](https://openresty.org/en/) configuration files for the reverse proxy<br>
 ✓ [Lua](https://www.lua.org/) functions to hook into each stage of the HTTP request and add custom logic (integrate 3rd party systems)<br>
-✓ Debugging and Live code reloading (sql/configs/lua) functionality using [subZero devtools](https://github.com/subzerocloud)<br>
+✓ Debugging and live code reloading (sql/configs/lua) functionality using [subZero devtools](https://github.com/subzerocloud/devtools)<br>
 ✓ Sql unit test using [pgTAP](http://pgtap.org/)<br>
 ✓ Integration tests with [SuperTest / Mocha](https://github.com/visionmedia/supertest)<br>
-✓ Docker files for building production images<br>
+✓ (soon) Docker files for building production images<br>
 ✓ Community support on [Slack](https://slack.subzero.cloud/)<br>
 
 
@@ -90,7 +90,13 @@ git merge upstream/master
 
 ## Development workflow and debugging
 
-[subZero devtools](https://github.com/subzerocloud) demo soon.
+Download and install [subZero devtools](https://github.com/subzerocloud/devtools) for your OS.<br />
+Execute `sz` (of the name you used to symlink the binary) in the root of your project.<br />
+After this step you can view the logs of all the stack components (SQL queries will also be logged).
+If you endit and sql/conf/lua file in your project, the changes will immediately be applied.
+
+
+![DevTools](https://github.com/subzerocloud/devtools/blob/master/screenshot.png?raw=true "DevTools")
 
 ## Deployment
 
@@ -98,12 +104,12 @@ There are two stages when going into production.
 
 ### Deploying your database code
 In production you should use [RDS](https://aws.amazon.com/rds/postgresql/) or a similar service.
-We'll have examples soon how to migrate SQL code from dev to production
+We'll soon have examples on how to migrate SQL code from dev to production
 
 ### Deploying PostgREST and OpenResty
-We recommend deploying both componets as Docker containers.
+We recommend deploying both components (OpenResty/PostgREST) as Docker containers.
 You can use [EC2 Container Service](https://aws.amazon.com/ecs/) to help solve a lot of devops problems when deploying containers.
-We'll provide task definition templates soon. For PostgREST you can use the official image in production. For OpenResty you will build your own image that is based on the official one.
+We'll soon provide task definition templates. For PostgREST you can use the official image in production. For OpenResty you will build your own image that is based on the official one but includes all your custom configurations and files.
 
 ## Contributing
 
@@ -116,9 +122,6 @@ Anyone and everyone is welcome to contribute.
 
 ## License
 
-Copyright © 2017-present subZero Cloud, LLC.
-This source code is licensed under the MIT
-license found in the [LICENSE.txt](https://github.com/subzerocloud/postgrest-starter-kit/blob/master/LICENSE.txt)
-file.
-The documentation to the project is licensed under the
-[CC BY-SA 4.0](http://creativecommons.org/licenses/by-sa/4.0/) license.
+Copyright © 2017-present subZero Cloud, LLC.<br />
+This source code is licensed under [MIT](https://github.com/subzerocloud/postgrest-starter-kit/blob/master/LICENSE.txt) license<br />
+The documentation to the project is licensed under the [CC BY-SA 4.0](http://creativecommons.org/licenses/by-sa/4.0/) license.
