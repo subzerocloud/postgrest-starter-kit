@@ -14,7 +14,7 @@ backends with [PostgREST](https://postgrest.com).
 ✓ Integration tests with [SuperTest / Mocha](https://github.com/visionmedia/supertest)<br>
 ✓ (soon) Docker files for building production images<br>
 ✓ Community support on [Slack](https://slack.subzero.cloud/)<br>
-✓ Compattible with [subZero](https://subzero.cloud/) if you decide you need a GraphQL API with no additional work<br>
+✓ Compatible with [subZero](https://subzero.cloud/) if you decide you need a GraphQL API with no additional work<br>
 
 
 ## Directory Layout
