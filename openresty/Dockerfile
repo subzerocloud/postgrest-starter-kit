@@ -8,7 +8,7 @@
 FROM openresty/openresty:jessie
 
 COPY entrypoint.sh /entrypoint.sh
-COPY nginx /usr/local/openresty
-COPY lualib /usr/local/openresty
+COPY nginx /usr/local/openresty/nginx
+COPY lualib /usr/local/openresty/lualib
 
 ENTRYPOINT ["/entrypoint.sh"]
