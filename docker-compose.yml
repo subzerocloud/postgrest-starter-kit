@@ -75,7 +75,7 @@ services:
       - "./db/src:/docker-entrypoint-initdb.d"
 
   rabbitmq:
-    image: rabbitmq:3.6.10-management
+    image: stevechavez/rabbitmq
     ports:
       - "15672:15672"
       - "15674:15674"
