@@ -38,27 +38,11 @@
       "durable": true,
       "auto_delete": false,
       "arguments": {}
-    },
-    {
-      "name": "other_events",
-      "vhost": "/",
-      "durable": true,
-      "auto_delete": false,
-      "arguments": {}
     }
   ],
   "exchanges": [
       {
          "name":"app_events",
-         "vhost":"/",
-         "type":"direct",
-         "durable":true,
-         "auto_delete":false,
-         "internal":false,
-         "arguments":{}
-      },
-      {
-         "name":"other_events",
          "vhost":"/",
          "type":"topic",
          "durable":true,
@@ -73,15 +57,7 @@
       "vhost": "/",
       "destination": "app_events",
       "destination_type": "queue",
-      "routing_key": "logstash",
-      "arguments": {}
-    },
-    {
-      "source": "other_events",
-      "vhost": "/",
-      "destination": "other_events",
-      "destination_type": "queue",
-      "routing_key": "*.v1",
+      "routing_key": "#",
       "arguments": {}
     }
   ]

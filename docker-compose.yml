@@ -80,6 +80,8 @@ services:
       - "15672:15672"
       - "15674:15674"
       - "5672:5672"
+    environment:
+      - RABBITMQ_AUTH_ENDPOINT=${RABBITMQ_AUTH_ENDPOINT}
     volumes:
       - "./rabbitmq/definitions.json:/etc/rabbitmq/definitions.json"
 
@@ -92,4 +94,4 @@ services:
     environment:
       - POSTGRESQL_URI=postgres://${DB_USER}:${DB_PASS}@${DB_HOST}:${DB_PORT}/${DB_NAME}
       - AMQP_URI=amqp://rabbitmq//
-      - BRIDGE_CHANNELS=management_events:management_events,app_events:app_events,other_events:other_events
+      - BRIDGE_CHANNELS=management_events:management_events,app_events:app_events
