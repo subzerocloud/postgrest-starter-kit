@@ -1,0 +1,810 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: PostgREST Starter Kit
+Parameters:
+  InstanceSshKey:
+    Type: AWS::EC2::KeyPair::KeyName
+    Description: "Name of an existing EC2 KeyPair to enable SSH access to the instance"
+  VolumeSize:
+    Type: Number
+    Default: "50"
+    Description: "Storage space available"
+  InstanceType:
+    Type: String
+    Default: "t2.micro"
+    Description: "Type of EC2 instance to start for this API instance"
+  InstanceCount:
+    Type: Number
+    Default: "1"
+    Description: "Start this many EC2 instances"
+  ECRRegion:
+    Type: String
+    Description: "Load Docker images from this AWS ECR region. If omitted, the current region is used."
+  SandboxPostgresImage:
+    Type: String
+    Default: "sandbox-pg:latest"
+    Description: "This image exists in your account's ECR repository."
+  OpenRestyImage:
+    Type: String
+    Default: "openresty:latest"
+    Description: "This image exists in your account's ECR repository."
+  PostgrestImage:
+    Type: String
+    Default: "subzerocloud/postgrest"
+    Description: "This image is not prepended with the ECR host because it is a standard PostgREST image."
+  PgRestDesiredCount:
+    Type: Number
+    Default: "1"
+    Description: "Start this many PostgREST instances"
+  OpenRestyDesiredCount:
+    Type: Number
+    Default: "1"
+    Description: "Start this many OpenResty instances"
+  CertificateArn:
+    Type: String
+    Description: "Provide full IAM/ACM certificate ARN to also serve HTTPS"
+  SandboxPostgresSuperUser:
+    Type: String
+    Default: "admin"
+  SandboxPostgresSuperUserPassword:
+    Type: String
+    Default: "adminpass"
+  DbHost:
+    Type: String
+  DbPort:
+    Type: String
+    Default: "5432"
+  DbName:
+    Type: String
+    Default: "app"
+  DbSchema:
+    Type: String
+    Default: "api"
+  DbUser:
+    Type: String
+    Default: "authenticator"
+  DbPassword:
+    Type: String
+    Default: "authenticatorpass"
+  DbAnonRole:
+    Type: String
+    Default: "anonymous"
+  DbPool:
+    Type: String
+    Default: "10"
+  MaxRows:
+    Type: String
+    Description: "MAX_ROWS env var"
+  PreRequest:
+    Type: String
+    Description: "PRE_REQUEST env var"
+  EnvironmentMode:
+    Type: String
+    Default: "Development"
+    AllowedValues: [ "Development", "Production" ]
+    Description: "Development starts a single instance with a sandbox PostgreSQL server is run in a container. Production creates an auto-scaling group and must use an external PostgreSQL server."
+  JwtSecret:
+    Type: String
+    Default: "secret"
+    Description: "Plaintext"
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterLabels:
+      InstanceSshKey:
+        default: "SSH Login Key"
+      VolumeSize:
+        default: "Virtual Disk Size (GB)"
+      InstanceType:
+        default: "EC2 Instance Type"
+      InstanceCount:
+        default: "Instance Count"
+      ECRRegion:
+        default: "Custom ECS Repository Region"
+      SandboxPostgresImage:
+        default: "Sandbox PostgreSQL Server Image (Development Only)"
+      OpenRestyImage:
+        default: "OpenResty Image"
+      PostgrestImage:
+        default: "PostgREST Image"
+      PgRestDesiredCount:
+        default: "PostgREST Desired Count"
+      OpenRestyDesiredCount:
+        default: "OpenResty Desired Count"
+      CertificateArn:
+        default: "SSL Certificate ARN"
+      SandboxPostgresSuperUser:
+        default: "Sandbox PostgreSQL Server Super User Name"
+      SandboxPostgresSuperUserPassword:
+        default: "Sandbox PostgreSQL Server Super User Password"
+      DbHost:
+        default: "PostgreSQL Server Host Name"
+      DbPort:
+        default: "PostgreSQL Server Port"
+      DbName:
+        default: "Database Name"
+      DbSchema:
+        default: "Database Schema"
+      DbUser:
+        default: "Authenticator Database User"
+      DbPassword:
+        default: "Authenticator Password"
+      DbAnonRole:
+        default: "Anonymous Role Name"
+      DbPool:
+        default: "Connection Pool Size"
+      MaxRows:
+        default: "Default Maximum Rows Returned"
+      PreRequest:
+        default: "Pre Request"
+      EnvironmentMode:
+        default: "Environment Mode"
+      JwtSecret:
+        default: "JWT Secret"
+    ParameterGroups:
+      - Label:
+          default: "General"
+        Parameters:
+          - EnvironmentMode
+          - JwtSecret
+          - InstanceSshKey
+          - CertificateArn
+          - InstanceType
+          - VolumeSize
+      - Label:
+          default: "Production Only"
+        Parameters:
+          - DbHost
+          - InstanceCount
+      - Label:
+          default: "Containers"
+        Parameters:
+          - PostgrestImage
+          - PgRestDesiredCount
+          - OpenRestyImage
+          - OpenRestyDesiredCount
+          - SandboxPostgresImage
+      - Label:
+          default: "Database"
+        Parameters:
+          - DbName
+          - DbSchema
+          - DbUser
+          - DbPassword
+          - DbAnonRole
+      - Label:
+          default: "PostgREST Settings"
+        Parameters:
+          - DbPool
+          - MaxRows
+          - PreRequest
+Outputs:
+  ExternalElbHost:
+    Description: "Internet-facing load balancer host name"
+    Value: !GetAtt ExternalLoadBalancer.DNSName
+Conditions:
+  IsDevelopment: !Equals [ !Ref EnvironmentMode, "Development" ]
+  IsProduction: !Equals [ !Ref EnvironmentMode, "Production" ]
+  UseCustomECRRegion: !Not [ !Equals [ !Ref ECRRegion, "" ] ]
+  HasSslCertificate: !Not [ !Equals [ !Ref CertificateArn, "" ] ]
+Resources:
+  # AWS provides frequently-updated EC2 machine images optimized for ECS
+  # A lambda function must be used to obtain the value for the current region
+  CustomResourceLambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: "Allow"
+            Principal:
+              Service:
+                - "lambda.amazonaws.com"
+            Action:
+              - "sts:AssumeRole"
+      Path: "/"
+      Policies:
+        - PolicyName: "LambdaRole"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: "Allow"
+                Action:
+                  - "logs:CreateLogGroup"
+                  - "logs:CreateLogStream"
+                  - "logs:PutLogEvents"
+                  - "s3:PutObject"
+                  - "s3:GetObject"
+                  - "ec2:DescribeImages"
+                  - "lambda:InvokeFunction"
+                Resource: "*"
+  NewestAmiLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      Handler: index.newestAmi
+      Role: !GetAtt CustomResourceLambdaRole.Arn
+      Timeout: 30
+      Runtime: nodejs6.10
+      Code:
+        ZipFile: !Sub |
+          const aws = require('aws-sdk');
+          const response = require('cfn-response');
+
+          function customResourceTemplate(handler) {
+            return function(event, context) {
+              console.log("REQUEST RECEIVED:\n" + JSON.stringify(event));
+
+              const resolve = response.send.bind(this, event, context, response.SUCCESS);
+              const reject = response.send.bind(this, event, context, response.FAILED);
+              if(event.RequestType === 'Delete') {
+                // Nothing to do to delete the resource
+                resolve()
+                return;
+              }
+
+              try {
+                handler(event).then(resolve).catch(reason => {
+                  console.log('HANDLER ERROR:\n' + reason);
+                  reject(reason);
+                });
+              } catch(reason) {
+                console.log('HANDLER ERROR:\n' + reason);
+                reject(reason);
+              }
+            }
+          }
+          
+          function isBeta(imageName) {
+            return imageName.toLowerCase().indexOf("beta") > -1 || imageName.toLowerCase().indexOf(".rc") > -1;
+          }
+
+          exports.newestAmi = customResourceTemplate(event => {
+            const region = event.ResourceProperties.Region;
+            if(typeof region !== 'string')
+              throw new Error('Region property required');
+
+            const ec2 = new aws.EC2({ region });
+            return ec2.describeImages({
+              Filters: [ { Name: 'name', Values: [ 'amzn-ami-*-amazon-ecs-optimized' ] } ],
+              Owners: [ 'amazon' ]
+            }).promise().then(describeImagesResult => {
+                var images = describeImagesResult.Images;
+                // Sort images by name in decscending order. The names contain the AMI version, formatted as YYYY.MM.Ver.
+                images.sort(function(x, y) { return y.Name.localeCompare(x.Name); });
+                for (var j = 0; j < images.length; j++) {
+                  if (isBeta(images[j].Name)) continue;
+                  return { ImageId: images[j].ImageId };
+                }
+            });
+          });
+  InstanceAmi:
+    Type: Custom::NewestAmi
+    Properties:
+      ServiceToken: !GetAtt NewestAmiLambda.Arn
+      Region: !Ref AWS::Region
+  #
+  # Create a VPC for the instance(s)
+  Subnet1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZone: !Select [ 0, !GetAZs "" ]
+      CidrBlock: "172.30.0.0/24"
+      MapPublicIpOnLaunch: "true"
+      VpcId: !Ref VPC
+  Subnet2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZone: !Select [ 1, !GetAZs "" ]
+      CidrBlock: "172.30.1.0/24"
+      MapPublicIpOnLaunch: "true"
+      VpcId: !Ref VPC
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+  VPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: "172.30.0.0/23"
+  AttachGateway:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId: !Ref VPC
+      InternetGatewayId: !Ref InternetGateway
+  RouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+  InternetGatewayRoute:
+    Type: AWS::EC2::Route
+    DependsOn: AttachGateway
+    Properties:
+      RouteTableId: !Ref RouteTable
+      DestinationCidrBlock: "0.0.0.0/0"
+      GatewayId: !Ref InternetGateway
+  RouteTableAssociation1:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref Subnet1
+      RouteTableId: !Ref RouteTable
+  RouteTableAssociation2:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref Subnet2
+      RouteTableId: !Ref RouteTable
+  #
+  # Define access rules for EC2 instance(s)
+  InstanceSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: "Enable SSH access via port 22"
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+        - IpProtocol: "tcp"
+          FromPort: "22"
+          ToPort: "22"
+          CidrIp: "0.0.0.0/0"
+  #
+  # Create EC2 Instance or Auto Scaling group for ECS cluster
+  LoadBalancerSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: "Allow ELB access from internet"
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+        - IpProtocol: "tcp"
+          FromPort: "80"
+          ToPort: "80"
+          CidrIp: "0.0.0.0/0"
+        - IpProtocol: "tcp"
+          FromPort: "443"
+          ToPort: "443"
+          CidrIp: "0.0.0.0/0"
+  LoadBalancerSecurityGroupIngress:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !GetAtt InstanceSecurityGroup.GroupId
+      IpProtocol: "tcp"
+      FromPort: "32768"
+      ToPort: "65535"
+      SourceSecurityGroupId: !GetAtt LoadBalancerSecurityGroup.GroupId
+  HttpsLoadBalancerSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: "Allow HTTPS ELB access to containers"
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+        - IpProtocol: "tcp"
+          FromPort: "443"
+          ToPort: "443"
+          CidrIp: "0.0.0.0/0"
+  HttpsLoadBalancerSecurityGroupIngress:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !GetAtt InstanceSecurityGroup.GroupId
+      IpProtocol: "tcp"
+      FromPort: "32768"
+      ToPort: "65535"
+      SourceSecurityGroupId: !GetAtt HttpsLoadBalancerSecurityGroup.GroupId
+  InstanceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: "Allow"
+            Principal:
+              Service:
+                - "ec2.amazonaws.com"
+            Action:
+              - "sts:AssumeRole"
+      Path: "/"
+      Policies:
+        - PolicyName: "Ec2Role"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: "Allow"
+                Action:
+                  - "ecs:CreateCluster"
+                  - "ecs:DeregisterContainerInstance"
+                  - "ecs:DiscoverPollEndpoint"
+                  - "ecs:Poll"
+                  - "ecs:RegisterContainerInstance"
+                  - "ecs:StartTelemetrySession"
+                  - "ecs:Submit*"
+                  - "ecr:GetAuthorizationToken"
+                  - "ecr:BatchCheckLayerAvailability"
+                  - "ecr:GetDownloadUrlForLayer"
+                  - "ecr:BatchGetImage"
+                  - "logs:CreateLogStream"
+                  - "logs:PutLogEvents"
+                  - "cloudwatch:PutMetricData"
+                Resource: "*"
+  InstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Path: "/"
+      Roles:
+        - !Ref InstanceRole
+  Cluster:
+    Type: AWS::ECS::Cluster
+  Instance:
+    Type: AWS::EC2::Instance
+    Condition: IsDevelopment
+    Properties:
+      BlockDeviceMappings:
+        - DeviceName: "/dev/xvda"
+          Ebs:
+            VolumeSize: !Ref "VolumeSize"
+            VolumeType: "gp2"
+            DeleteOnTermination: true
+      IamInstanceProfile: !Ref InstanceProfile
+      ImageId: !GetAtt InstanceAmi.ImageId
+      InstanceType: !Ref InstanceType
+      KeyName: !Ref InstanceSshKey
+      SubnetId: !Ref Subnet1
+      SecurityGroupIds:
+        - !GetAtt InstanceSecurityGroup.GroupId
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash
+          yum -y install aws-cli aws-cfn-bootstrap
+
+          echo "ECS_CLUSTER=${Cluster}" >> /etc/ecs/ecs.config
+          echo "ECS_AVAILABLE_LOGGING_DRIVERS=[\"json-file\",\"awslogs\"]" >> /etc/ecs/ecs.config
+  LaunchConfig:
+    Type: AWS::AutoScaling::LaunchConfiguration
+    Condition: IsProduction
+    Properties:
+      KeyName: !Ref InstanceSshKey
+      ImageId: !GetAtt InstanceAmi.ImageId
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash
+          yum -y install aws-cli aws-cfn-bootstrap
+
+          echo "ECS_CLUSTER=${Cluster}" >> /etc/ecs/ecs.config
+          echo "ECS_AVAILABLE_LOGGING_DRIVERS=[\"json-file\",\"awslogs\"]" >> /etc/ecs/ecs.config
+      SecurityGroups:
+        - !GetAtt InstanceSecurityGroup.GroupId
+      InstanceType: !Ref InstanceType
+      IamInstanceProfile: !Ref InstanceProfile
+      BlockDeviceMappings:
+        - DeviceName: "/dev/xvdcz"
+          NoDevice: true
+        - DeviceName: "/dev/xvda"
+          Ebs:
+            VolumeSize: !Ref VolumeSize
+            VolumeType: "gp2"
+            DeleteOnTermination: true
+  AutoscalingGroup:
+    Type: AWS::AutoScaling::AutoScalingGroup
+    Condition: IsProduction
+    Properties:
+      DesiredCapacity: !Ref InstanceCount
+      MaxSize: !Ref InstanceCount
+      MinSize: !Ref InstanceCount
+      VPCZoneIdentifier:
+        - !Ref Subnet1
+        - !Ref Subnet2
+      Cooldown: "300"
+      HealthCheckGracePeriod: "300"
+      HealthCheckType: "EC2"
+      LaunchConfigurationName: !Ref LaunchConfig
+  #
+  # Create sandbox PostgreSQL server instance if desired
+  PgLogGroup:
+    Condition: IsDevelopment
+    Type: AWS::Logs::LogGroup
+  PgTaskDef:
+    Condition: IsDevelopment
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      ContainerDefinitions:
+        - Name: "sandbox-pg"
+          Image: !Join
+            - ""
+            -
+              - !Ref AWS::AccountId
+              - ".dkr.ecr."
+              - !If
+                - UseCustomECRRegion
+                - !Ref ECRRegion
+                - !Ref AWS::Region
+              - ".amazonaws.com/"
+              - !Ref SandboxPostgresImage
+          Cpu: "50"
+          Memory: "128"
+          PortMappings:
+            - HostPort: "5432"
+              ContainerPort: "5432"
+              Protocol: "tcp"
+          Environment:
+            - Name: POSTGRES_USER
+              Value: !Ref SandboxPostgresSuperUser
+            - Name: POSTGRES_PASSWORD
+              Value: !Ref SandboxPostgresSuperUserPassword
+            - Name: POSTGRES_DB
+              Value: !Ref DbName
+            # env vars useful for our sql scripts
+            - Name: SUPER_USER
+              Value: !Ref SandboxPostgresSuperUser
+            - Name: SUPER_USER_PASSWORD
+              Value: !Ref SandboxPostgresSuperUserPassword
+            - Name: DB_NAME
+              Value: !Ref DbName
+            - Name: DB_USER
+              Value: !Ref DbUser
+            - Name: DB_PASS
+              Value: !Ref DbPassword
+            - Name: DEVELOPMENT
+              Value: !If
+                - IsDevelopment
+                - "1"
+                - "0"
+            - Name: JWT_SECRET
+              Value: !Ref JwtSecret
+          LogConfiguration:
+            LogDriver: "awslogs"
+            Options:
+              awslogs-group: !Ref PgLogGroup
+              awslogs-region: !Ref AWS::Region
+  PgService:
+    Condition: IsDevelopment
+    Type: AWS::ECS::Service
+    Properties:
+      Cluster: !Ref Cluster
+      DesiredCount: "1"
+      TaskDefinition: !Ref PgTaskDef
+  #
+  # Create PostgREST service and internal load balancer
+  PgRestLogGroup:
+    Type: AWS::Logs::LogGroup
+  PgRestTaskDef:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      ContainerDefinitions:
+        - Name: "pgrest"
+          Image: !Ref PostgrestImage
+          Cpu: "10"
+          Memory: "100"
+          PortMappings:
+            - HostPort: "0"
+              ContainerPort: "3000"
+              Protocol: "tcp"
+          Environment:
+            - Name: DB_URI
+              Value: !Join
+                - ""
+                -
+                  - "postgres://"
+                  - !Ref DbUser
+                  - ":"
+                  - !Ref DbPassword
+                  - "@"
+                  - !If
+                    - IsDevelopment
+                    - !GetAtt Instance.PrivateIp
+                    - !Ref DbHost
+                  - ":"
+                  - !Ref DbPort
+                  - "/"
+                  - !Ref DbName
+            - Name: DB_SCHEMA
+              Value: !Ref DbSchema
+            - Name: DB_ANON_ROLE
+              Value: !Ref DbAnonRole
+            - Name: DB_POOL
+              Value: !Ref DbPool
+            - Name: JWT_SECRET
+              Value: !Ref JwtSecret
+            - Name: MAX_ROWS
+              Value: !Ref MaxRows
+            - Name: PRE_REQUEST
+              Value: !Ref PreRequest
+          LogConfiguration:
+            LogDriver: "awslogs"
+            Options:
+              awslogs-group: !Ref PgRestLogGroup
+              awslogs-region: !Ref AWS::Region
+  ServiceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: "Allow"
+            Principal:
+              Service:
+                - "ecs.amazonaws.com"
+            Action:
+              - "sts:AssumeRole"
+      Path: "/"
+      Policies:
+        - PolicyName: "EcsRole"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: "Allow"
+                Action:
+                  - "ec2:AuthorizeSecurityGroupIngress"
+                  - "ec2:Describe*"
+                  - "elasticloadbalancing:DeregisterInstancesFromLoadBalancer"
+                  - "elasticloadbalancing:DeregisterTargets"
+                  - "elasticloadbalancing:Describe*"
+                  - "elasticloadbalancing:RegisterInstancesWithLoadBalancer"
+                  - "elasticloadbalancing:RegisterTargets"
+                Resource: "*"
+  InternalLoadBalancer:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      Scheme: "internal"
+      Subnets:
+        - Ref: Subnet1
+        - Ref: Subnet2
+      LoadBalancerAttributes:
+        - Key: idle_timeout.timeout_seconds
+          Value: "50"
+      SecurityGroups:
+        - !GetAtt LoadBalancerSecurityGroup.GroupId
+  InternalTargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      HealthCheckIntervalSeconds: 30
+      HealthCheckPath: "/"
+      HealthCheckProtocol: HTTP
+      HealthCheckTimeoutSeconds: 10
+      HealthyThresholdCount: 4
+      Matcher:
+        HttpCode: '200'
+      Port: 80
+      Protocol: HTTP
+      TargetGroupAttributes:
+        - Key: deregistration_delay.timeout_seconds
+          Value: '30'
+      UnhealthyThresholdCount: 3
+      VpcId: !Ref VPC
+  InternalListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      Protocol: HTTP
+      Port: 80
+      LoadBalancerArn: !Ref InternalLoadBalancer
+      DefaultActions:
+        - TargetGroupArn: !Ref InternalTargetGroup
+          Type: forward
+  PgRestService:
+    Type: AWS::ECS::Service
+    DependsOn: InternalListener
+    Properties:
+      Cluster: !Ref Cluster
+      DeploymentConfiguration:
+        MaximumPercent: "200"
+        MinimumHealthyPercent: "50"
+      DesiredCount: !Ref PgRestDesiredCount
+      LoadBalancers:
+        - ContainerName: "pgrest"
+          TargetGroupArn: !Ref InternalTargetGroup
+          ContainerPort: 3000
+      TaskDefinition: !Ref PgRestTaskDef
+      Role: !Ref ServiceRole
+  #
+  # Create OpenResty service and external load balancer
+  OpenRestyLogGroup:
+    Type: AWS::Logs::LogGroup
+  OpenRestyTaskDef:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      ContainerDefinitions:
+        - Name: "openresty"
+          Image: !Join
+            - ""
+            -
+              - !Ref AWS::AccountId
+              - ".dkr.ecr."
+              - !If
+                - UseCustomECRRegion
+                - !Ref ECRRegion
+                - !Ref AWS::Region
+              - ".amazonaws.com/"
+              - !Ref OpenRestyImage
+          Cpu: "10"
+          Memory: "100"
+          PortMappings:
+            - HostPort: "0"
+              ContainerPort: "80"
+              Protocol: "tcp"
+          Environment:
+            - Name: DB_HOST
+              Value: !If
+              - IsDevelopment
+              - !GetAtt Instance.PrivateIp
+              - !Ref DbHost
+            - Name: DB_PORT
+              Value: !Ref DbPort
+            - Name: DB_NAME
+              Value: !Ref DbName
+            - Name: DB_SCHEMA
+              Value: !Ref DbSchema
+            - Name: DB_USER
+              Value: !Ref DbUser
+            - Name: DB_PASS
+              Value: !Ref DbPassword
+            - Name: POSTGREST_HOST
+              Value: !GetAtt InternalLoadBalancer.DNSName
+            - Name: POSTGREST_PORT
+              Value: "80"
+            - Name: JWT_SECRET
+              Value: !Ref JwtSecret
+            - Name: DEVELOPMENT
+              Value: !If
+                - IsDevelopment
+                - "1"
+                - "0"
+          LogConfiguration:
+            LogDriver: "awslogs"
+            Options:
+              awslogs-group: !Ref OpenRestyLogGroup
+              awslogs-region: !Ref AWS::Region
+  ExternalLoadBalancer:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      Scheme: "internet-facing"
+      Subnets:
+        - Ref: Subnet1
+        - Ref: Subnet2
+      LoadBalancerAttributes:
+        - Key: idle_timeout.timeout_seconds
+          Value: "50"
+      SecurityGroups:
+        - !GetAtt LoadBalancerSecurityGroup.GroupId
+  ExternalTargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      HealthCheckIntervalSeconds: 30
+      HealthCheckPath: "/rest/"
+      HealthCheckProtocol: HTTP
+      HealthCheckTimeoutSeconds: 10
+      HealthyThresholdCount: 4
+      Matcher:
+        HttpCode: '200'
+      Port: 80
+      Protocol: HTTP
+      TargetGroupAttributes:
+        - Key: deregistration_delay.timeout_seconds
+          Value: '30'
+      UnhealthyThresholdCount: 3
+      VpcId: !Ref VPC
+  ExternalListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      Protocol: HTTP
+      Port: 80
+      LoadBalancerArn: !Ref ExternalLoadBalancer
+      DefaultActions:
+        - TargetGroupArn: !Ref ExternalTargetGroup
+          Type: forward
+  ExternalListenerHTTPS:
+    Condition: HasSslCertificate
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      Protocol: HTTPS
+      Port: 443
+      Certificates:
+        - CertificateArn: !Ref CertificateArn
+      LoadBalancerArn: !Ref ExternalLoadBalancer
+      DefaultActions:
+        - TargetGroupArn: !Ref ExternalTargetGroup
+          Type: forward
+  OpenRestyService:
+    Type: AWS::ECS::Service
+    DependsOn: ExternalListener
+    Properties:
+      Cluster: !Ref Cluster
+      DeploymentConfiguration:
+        MaximumPercent: "200"
+        MinimumHealthyPercent: "50"
+      DesiredCount: !Ref OpenRestyDesiredCount
+      LoadBalancers:
+        - ContainerName: "openresty"
+          TargetGroupArn: !Ref ExternalTargetGroup
+          ContainerPort: 80
+      TaskDefinition: !Ref OpenRestyTaskDef
+      Role: !Ref ServiceRole

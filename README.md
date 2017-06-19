@@ -109,8 +109,15 @@ We'll soon have examples on how to migrate SQL code from dev to production
 
 ### Deploying PostgREST and OpenResty
 We recommend deploying both components (OpenResty/PostgREST) as Docker containers.
-You can use [EC2 Container Service](https://aws.amazon.com/ecs/) to help solve a lot of devops problems when deploying containers.
+You can use [EC2 Container Service (ECS)](https://aws.amazon.com/ecs/) to help solve a lot of devops problems when deploying containers.
 We'll soon provide task definition templates. For PostgREST you can use the official image in production. For OpenResty you will build your own image that is based on the official one but includes all your custom configurations and files.
+
+#### AWS CloudFormation Stack Template
+
+To automate deploying to AWS using the EC2 Container Service, a CloudFormation template is included [`cloudformation.yml`](cloudformation.yml) that will create a cluster of EC2 instances, internal and external load balancers, and ECS services for your application.
+
+1. Follow the instructions in the AWS ECS console for pushing Docker images to repositories: building the Docker images in the `db` and `openresty` directories, then tagging and pushing them to your new AWS repositories using the commands provided by the AWS console.
+2. Upload [`cloudformation.yml`](cloudformation.yml) in "Create New Stack" in the AWS CloudFormation Console. Fill in the options, selecting development/production and then create the stack. The output will contain the host name for the internet-facing load balancer connected to your application. You may use this hostname with AWS Route 53 or create a CNAME in another DNS provider.
 
 ## Contributing
 
