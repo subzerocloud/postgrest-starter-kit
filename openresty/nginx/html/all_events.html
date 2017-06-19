@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html><head>
+  <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.6.2/jquery.min.js"></script>
+  <script src="//cdn.jsdelivr.net/sockjs/1.0.3/sockjs.min.js"></script>
+  <script src="/js/stomp.js"></script>
+  <style>
+  .box {
+          margin: 0 20px 0 20px;
+      }
+
+      .box div {
+          border-color: grey;
+          height: 300px;
+          overflow: auto;
+          border: 1px solid;
+          -moz-border-radius: 4px;
+          border-radius: 4px;
+          width: 100%;
+          padding: 5px;
+          margin: 3px 0 10px 0;
+
+      }
+
+      div code {
+          display: block;
+      }
+  </style>
+  <title>All app events (admin)</title>
+</head>
+<body lang="en">
+    <h2>All app events (admin)</h2>
+
+    <div id="first" class="box">
+      <h3>Received</h3>
+      <div></div>
+    </div>
+
+    <div id="second" class="box">
+      <h3>Logs</h3>
+      <div></div>
+    </div>
+
+    <script>
+      
+      var client = null
+      var pipe = function(el_name) {
+          var div  = $(el_name + ' div');
+          var print = function(m, p) {
+              p = (p === undefined) ? '' : JSON.stringify(p);
+              div.append($("<code>").text(m + ' ' + p));
+              div.scrollTop(div.scrollTop() + 10000);
+          };
+          return print;
+      };
+      var print_first = pipe('#first');
+      var on_connect = function(x) {
+          var exchange = 'app_events'
+          var routing_key = '#'
+          id = client.subscribe("/exchange/" + exchange + "/" + routing_key, function(message) {
+            console.log(message)
+            print_first(message.headers.destination.replace('/exchange/app_events/',''))
+            print_first(message.body);
+          });
+      };
+      var do_connect = function(c){
+        /*
+        here we connect directly to RabbitMQ so the login is checked against the connect frame
+        and not the cookie
+        */
+        console.log('Connecting') 
+        client = Stomp.client('ws://' + window.location.hostname + ':15674/ws');
+        client.debug = pipe('#second');      
+        client.connect('guest', 'guest', on_connect, on_error, '/'); //rabbitmq admin user
+      }
+      var on_error =  function(e) {
+        //aggressive reconnect
+        //a lot can be improved here, this is just an example
+        if( 
+          (typeof e == 'object' && e.body.match(/Access refused/g)) ||
+          (typeof e == 'string' && e.match(/Lost connection/g))
+        ){
+          setTimeout(function() {
+            client.disconnect()
+            do_connect()
+          }, 2 * 1000);
+        }
+      };
+      do_connect();
+    </script>
+</body>
+</html>
