@@ -1,0 +1,405 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: PostgREST Starter Kit Application Service
+Parameters:
+  ListenerHostNamePattern:
+    Type: String
+    Description: "Listen for requests on the load balancer for this domain. The  'loadbalancer.yml' stack must have already been created to use this stack template."
+    Default: "*.mydomain.com"
+  HasHttpsListener:
+    Type: String
+    Default: "No"
+    AllowedValues: [ "Yes", "No" ]
+    Description: "Select this if a Certificate ARN was provided when creating The 'loadbalancer.yml' stack."
+  ClusterName:
+    Type: String
+    Description: "Name of the ECS cluster created with the wizard"
+  ECRRegion:
+    Type: String
+    Description: "Load Docker images from this AWS ECR region. If omitted, the current region is used."
+  SandboxPostgresImage:
+    Type: String
+    Default: "sandbox-pg:latest"
+    Description: "This image exists in your account's ECR repository."
+  OpenRestyImage:
+    Type: String
+    Default: "openresty:latest"
+    Description: "This image exists in your account's ECR repository."
+  PostgrestImage:
+    Type: String
+    Default: "subzerocloud/postgrest"
+    Description: "This image is not prepended with the ECR host because it is a standard PostgREST image."
+  DesiredCount:
+    Type: Number
+    Default: "1"
+    Description: "Attempt to start this many application instances"
+  SandboxPostgresSuperUser:
+    Type: String
+    Default: "admin"
+  SandboxPostgresSuperUserPassword:
+    Type: String
+    Default: "adminpass"
+  DbHost:
+    Type: String
+  DbPort:
+    Type: String
+    Default: "5432"
+  DbName:
+    Type: String
+    Default: "app"
+  DbSchema:
+    Type: String
+    Default: "api"
+  DbUser:
+    Type: String
+    Default: "authenticator"
+  DbPassword:
+    Type: String
+    Default: "authenticatorpass"
+  DbAnonRole:
+    Type: String
+    Default: "anonymous"
+  DbPool:
+    Type: String
+    Default: "10"
+  MaxRows:
+    Type: String
+    Description: "MAX_ROWS env var"
+  PreRequest:
+    Type: String
+    Description: "PRE_REQUEST env var"
+  EnvironmentMode:
+    Type: String
+    Default: "Development"
+    AllowedValues: [ "Development", "Production" ]
+    Description: "Development starts a single task with a sandbox PostgreSQL server similar to the local docker-compose.yml. Production creates uses an external PostgreSQL server with the desired number of tasks running."
+  JwtSecret:
+    Type: String
+    Default: "secret"
+    Description: "Plaintext"
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterLabels:
+      ListenerHostNamePattern:
+        default: "Listener Host Name Pattern"
+      ClusterName:
+        default: "ECS Cluster Name"
+      ECRRegion:
+        default: "Custom ECS Repository Region"
+      SandboxPostgresImage:
+        default: "Sandbox PostgreSQL Server Image (Development Only)"
+      OpenRestyImage:
+        default: "OpenResty Image"
+      PostgrestImage:
+        default: "PostgREST Image"
+      DesiredCount:
+        default: "Application Task Desired Count"
+      HasHttpsListener:
+        default: "Is load balancer serving HTTPS?"
+      SandboxPostgresSuperUser:
+        default: "Sandbox PostgreSQL Server Super User Name"
+      SandboxPostgresSuperUserPassword:
+        default: "Sandbox PostgreSQL Server Super User Password"
+      DbHost:
+        default: "PostgreSQL Server Host Name"
+      DbPort:
+        default: "PostgreSQL Server Port"
+      DbName:
+        default: "Database Name"
+      DbSchema:
+        default: "Database Schema"
+      DbUser:
+        default: "Authenticator Database User"
+      DbPassword:
+        default: "Authenticator Password"
+      DbAnonRole:
+        default: "Anonymous Role Name"
+      DbPool:
+        default: "Connection Pool Size"
+      MaxRows:
+        default: "Default Maximum Rows Returned"
+      PreRequest:
+        default: "Pre Request"
+      EnvironmentMode:
+        default: "Environment Mode"
+      JwtSecret:
+        default: "JWT Secret"
+    ParameterGroups:
+      - Label:
+          default: "General"
+        Parameters:
+          - ClusterName
+          - ListenerHostNamePattern
+          - EnvironmentMode
+          - JwtSecret
+          - HasHttpsListener
+      - Label:
+          default: "Production Only"
+        Parameters:
+          - DbHost
+          - DbPort
+          - DesiredCount
+      - Label:
+          default: "Container Images"
+        Parameters:
+          - PostgrestImage
+          - OpenRestyImage
+          - SandboxPostgresImage
+      - Label:
+          default: "Database"
+        Parameters:
+          - DbName
+          - DbSchema
+          - DbUser
+          - DbPassword
+          - DbAnonRole
+      - Label:
+          default: "PostgREST Settings"
+        Parameters:
+          - DbPool
+          - MaxRows
+          - PreRequest
+Conditions:
+  IsDevelopment: !Equals [ !Ref EnvironmentMode, "Development" ]
+  IsProduction: !Equals [ !Ref EnvironmentMode, "Production" ]
+  UseCustomECRRegion: !Not [ !Equals [ !Ref ECRRegion, "" ] ]
+  HasHttpsListener: !Equals [ !Ref HasHttpsListener, "Yes" ]
+Resources:
+  PgLogGroup:
+    Condition: IsDevelopment
+    Type: AWS::Logs::LogGroup
+  PgRestLogGroup:
+    Type: AWS::Logs::LogGroup
+  OpenRestyLogGroup:
+    Type: AWS::Logs::LogGroup
+  TaskDef:
+    Condition: IsDevelopment
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      ContainerDefinitions:
+        - !If
+          - IsDevelopment
+          - Name: "pg"
+            Image: !Join
+              - ""
+              -
+                - !Ref AWS::AccountId
+                - ".dkr.ecr."
+                - !If
+                  - UseCustomECRRegion
+                  - !Ref ECRRegion
+                  - !Ref AWS::Region
+                - ".amazonaws.com/"
+                - !Ref SandboxPostgresImage
+            Cpu: "50"
+            Memory: "128"
+            PortMappings:
+              - HostPort: "5432"
+                ContainerPort: "5432"
+                Protocol: "tcp"
+            Environment:
+              - Name: POSTGRES_USER
+                Value: !Ref SandboxPostgresSuperUser
+              - Name: POSTGRES_PASSWORD
+                Value: !Ref SandboxPostgresSuperUserPassword
+              - Name: POSTGRES_DB
+                Value: !Ref DbName
+              # env vars useful for our sql scripts
+              - Name: SUPER_USER
+                Value: !Ref SandboxPostgresSuperUser
+              - Name: SUPER_USER_PASSWORD
+                Value: !Ref SandboxPostgresSuperUserPassword
+              - Name: DB_NAME
+                Value: !Ref DbName
+              - Name: DB_USER
+                Value: !Ref DbUser
+              - Name: DB_PASS
+                Value: !Ref DbPassword
+              - Name: DEVELOPMENT
+                Value: !If
+                  - IsDevelopment
+                  - "1"
+                  - "0"
+              - Name: JWT_SECRET
+                Value: !Ref JwtSecret
+            LogConfiguration:
+              LogDriver: "awslogs"
+              Options:
+                awslogs-group: !Ref PgLogGroup
+                awslogs-region: !Ref AWS::Region
+          - !Ref AWS::NoValue
+        - Name: "postgrest"
+          Image: !Ref PostgrestImage
+          Cpu: "10"
+          Memory: "100"
+          Links:
+            - !If
+              - IsDevelopment
+              - "pg:pg"
+              - !Ref AWS::NoValue
+          Environment:
+            - Name: DB_URI
+              Value: !Join
+                - ""
+                -
+                  - "postgres://"
+                  - !Ref DbUser
+                  - ":"
+                  - !Ref DbPassword
+                  - "@"
+                  - !If
+                    - IsDevelopment
+                    - "pg"
+                    - !Ref DbHost
+                  - ":"
+                  - !If
+                    - IsDevelopment
+                    - 5432
+                    - !Ref DbPort
+                  - "/"
+                  - !Ref DbName
+            - Name: DB_SCHEMA
+              Value: !Ref DbSchema
+            - Name: DB_ANON_ROLE
+              Value: !Ref DbAnonRole
+            - Name: DB_POOL
+              Value: !Ref DbPool
+            - Name: JWT_SECRET
+              Value: !Ref JwtSecret
+            - Name: MAX_ROWS
+              Value: !Ref MaxRows
+            - Name: PRE_REQUEST
+              Value: !Ref PreRequest
+          LogConfiguration:
+            LogDriver: "awslogs"
+            Options:
+              awslogs-group: !Ref PgRestLogGroup
+              awslogs-region: !Ref AWS::Region
+        - Name: "openresty"
+          Image: !Join
+            - ""
+            -
+              - !Ref AWS::AccountId
+              - ".dkr.ecr."
+              - !If
+                - UseCustomECRRegion
+                - !Ref ECRRegion
+                - !Ref AWS::Region
+              - ".amazonaws.com/"
+              - !Ref OpenRestyImage
+          Cpu: "10"
+          Memory: "100"
+          PortMappings:
+            - HostPort: "0"
+              ContainerPort: "80"
+              Protocol: "tcp"
+          Links:
+            - !If
+              - IsDevelopment
+              - "pg:pg"
+              - !Ref AWS::NoValue
+            - "postgrest:postgrest"
+          Environment:
+            - Name: DB_HOST
+              Value: !If
+              - IsDevelopment
+              - "pg"
+              - !Ref DbHost
+            - Name: DB_PORT
+              Value: !If
+              - IsDevelopment
+              - "5432"
+              - !Ref DbPort
+            - Name: DB_NAME
+              Value: !Ref DbName
+            - Name: DB_SCHEMA
+              Value: !Ref DbSchema
+            - Name: DB_USER
+              Value: !Ref DbUser
+            - Name: DB_PASS
+              Value: !Ref DbPassword
+            - Name: POSTGREST_HOST
+              Value: "postgrest"
+            - Name: POSTGREST_PORT
+              Value: "3000"
+            - Name: JWT_SECRET
+              Value: !Ref JwtSecret
+            - Name: DEVELOPMENT
+              Value: !If
+                - IsDevelopment
+                - "1"
+                - "0"
+          LogConfiguration:
+            LogDriver: "awslogs"
+            Options:
+              awslogs-group: !Ref OpenRestyLogGroup
+              awslogs-region: !Ref AWS::Region
+  TargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      HealthCheckIntervalSeconds: 30
+      HealthCheckPath: "/"
+      HealthCheckProtocol: HTTP
+      HealthCheckTimeoutSeconds: 10
+      HealthyThresholdCount: 4
+      Matcher:
+        HttpCode: '200'
+      Port: 80
+      Protocol: HTTP
+      TargetGroupAttributes:
+        - Key: deregistration_delay.timeout_seconds
+          Value: '30'
+      UnhealthyThresholdCount: 3
+      VpcId:
+        Fn::ImportValue:
+          !Sub "${ClusterName}-Vpc"
+  ListenerRuleHttp:
+    Type: AWS::ElasticLoadBalancingV2::ListenerRule
+    Properties:
+      Actions:
+      - Type: forward
+        TargetGroupArn:
+          Ref: TargetGroup
+      Conditions:
+      - Field: host-header
+        Values:
+        - !Ref ListenerHostNamePattern
+      ListenerArn:
+        Fn::ImportValue:
+          !Sub "${ClusterName}-HttpListener"
+      Priority: 1
+  ListenerRuleHttps:
+    Condition: HasHttpsListener
+    Type: AWS::ElasticLoadBalancingV2::ListenerRule
+    Properties:
+      Actions:
+      - Type: forward
+        TargetGroupArn:
+          Ref: TargetGroup
+      Conditions:
+      - Field: host-header
+        Values:
+        - !Ref ListenerHostNamePattern
+      ListenerArn:
+        Fn::ImportValue:
+          !Sub "${ClusterName}-HttpsListener"
+      Priority: 1
+  Service:
+    Type: AWS::ECS::Service
+    DependsOn: ListenerRuleHttp
+    Properties:
+      Cluster: !Ref ClusterName
+      DeploymentConfiguration:
+        MaximumPercent: "200"
+        MinimumHealthyPercent: "50"
+      DesiredCount: !If
+        - IsDevelopment
+        - "1"
+        - !Ref DesiredCount
+      LoadBalancers:
+        - ContainerName: "openresty"
+          TargetGroupArn: !Ref TargetGroup
+          ContainerPort: 80
+      TaskDefinition: !Ref TaskDef
+      Role:
+        Fn::ImportValue:
+          !Sub "${ClusterName}-ServiceRole"

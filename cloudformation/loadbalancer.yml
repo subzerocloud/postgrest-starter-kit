@@ -11,12 +11,29 @@ Outputs:
   ExternalElbHost:
     Description: "Internet-facing load balancer host name"
     Value: !GetAtt ExternalLoadBalancer.DNSName
-  TargetGroup:
-    Description: "Add tasks to this target group"
-    Value: !Ref ExternalTargetGroup
-    # For !ImportValue in application.yml
+  HttpListener:
+    Description: "Add listener rules to this listener"
+    Value: !Ref ExternalListenerHttp
     Export:
-      Name: !Sub "${ClusterName}-TargetGroup"
+      Name: !Sub "${ClusterName}-HttpListener"
+  HttpsListener:
+    Description: "Add listener rules to this listener"
+    Value: !If
+      - HasSslCertificate
+      - !Ref ExternalListenerHttps
+      - "N/A"
+    Export:
+      Name: !Sub "${ClusterName}-HttpsListener"
+  ServiceRole:
+    Description: "ECS Service Role for joining load balancer"
+    Value: !Ref ServiceRole
+    Export:
+      Name: !Sub "${ClusterName}-ServiceRole"
+  VpcId:
+    Description: "VPC ID from ECS Cluster Wizard"
+    Value: !GetAtt ClusterStackResources.Vpc
+    Export:
+      Name: !Sub "${ClusterName}-Vpc"
 Conditions:
   HasSslCertificate: !Not [ !Equals [ !Ref CertificateArn, "" ] ]
 Resources:
@@ -120,6 +137,14 @@ Resources:
           FromPort: "443"
           ToPort: "443"
           CidrIp: "0.0.0.0/0"
+  LoadBalancerSecurityGroupIngress:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !GetAtt ClusterStackResources.EcsSecurityGroup
+      IpProtocol: "tcp"
+      FromPort: "32768"
+      ToPort: "65535"
+      SourceSecurityGroupId: !GetAtt LoadBalancerSecurityGroup.GroupId
   ExternalLoadBalancer:
     Type: AWS::ElasticLoadBalancingV2::LoadBalancer
     Properties:
@@ -132,7 +157,7 @@ Resources:
           Value: "50"
       SecurityGroups:
         - !GetAtt LoadBalancerSecurityGroup.GroupId
-  ExternalTargetGroup:
+  PlaceholderTargetGroup:
     Type: AWS::ElasticLoadBalancingV2::TargetGroup
     Properties:
       HealthCheckIntervalSeconds: 30
@@ -149,16 +174,16 @@ Resources:
           Value: '30'
       UnhealthyThresholdCount: 3
       VpcId: !GetAtt ClusterStackResources.Vpc
-  ExternalListener:
+  ExternalListenerHttp:
     Type: AWS::ElasticLoadBalancingV2::Listener
     Properties:
       Protocol: HTTP
       Port: 80
       LoadBalancerArn: !Ref ExternalLoadBalancer
       DefaultActions:
-        - TargetGroupArn: !Ref ExternalTargetGroup
+        - TargetGroupArn: !Ref PlaceholderTargetGroup
           Type: forward
-  ExternalListenerHTTPS:
+  ExternalListenerHttps:
     Condition: HasSslCertificate
     Type: AWS::ElasticLoadBalancingV2::Listener
     Properties:
@@ -168,5 +193,31 @@ Resources:
         - CertificateArn: !Ref CertificateArn
       LoadBalancerArn: !Ref ExternalLoadBalancer
       DefaultActions:
-        - TargetGroupArn: !Ref ExternalTargetGroup
+        - TargetGroupArn: !Ref PlaceholderTargetGroup
           Type: forward
+  ServiceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: "Allow"
+            Principal:
+              Service:
+                - "ecs.amazonaws.com"
+            Action:
+              - "sts:AssumeRole"
+      Path: "/"
+      Policies:
+        - PolicyName: "EcsRole"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: "Allow"
+                Action:
+                  - "elasticloadbalancing:DeregisterInstancesFromLoadBalancer"
+                  - "elasticloadbalancing:DeregisterTargets"
+                  - "elasticloadbalancing:Describe*"
+                  - "elasticloadbalancing:RegisterInstancesWithLoadBalancer"
+                  - "elasticloadbalancing:RegisterTargets"
+                Resource: "*"
