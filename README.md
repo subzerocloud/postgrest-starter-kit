@@ -1,13 +1,20 @@
-# PostgREST API Starter Kit
+# PostgREST Starter Kit
 
-**PostgREST API Starter Kit** is a boilerplate and tooling for authoring **data API**
-backends with [PostgREST](https://postgrest.com).
+Boilerplate and tooling for authoring REST API backends with [PostgREST](https://postgrest.com).
+
+![PostgREST Starter Kit](/media/postgrest-starter-kit.gif?raw=true "PostgREST Starter Kit")
+
+## Purpose
+
+PostgREST enables a different way of building data driven API backends. It does "one thing well" and that is to provide you with a REST api over your database, however to build a complex production system that does things like talk to 3rd party systems, sends emails, implements real time updates for browsers, write integration tests, implement authentication, you need additional components. For this reason, some developers either submit feature requests that are not the scope of PostgREST or think of it just as a prototyping utility and not a powerful/flexible production component with excellent performance. This repository aims to be a starting point for all PostgREST based projects and bring all components together under a well defined structure. We also provide tooling that will aid you with iterating on your project and tools/scripts to enable a build pipeline to push everything to production. There are quite a few components in the stack but you can safely comment out pg_amqp_bridge/rabbitmq (or even openresty) instances in docker-compose.yml if you don't need the features/functionality they provide.
+
 
 ## Features
 
 ✓ Cross-platform development on macOS, Windows or Linux inside [Docker](https://www.docker.com/)<br>
 ✓ [PostgreSQL](https://www.postgresql.org/) database schema boilerplate with authentication and authorization flow<br>
 ✓ [OpenResty](https://openresty.org/en/) configuration files for the reverse proxy<br>
+✓ [RabbitMQ](https://www.rabbitmq.com/) integration through [pg-amqp-bridge](https://github.com/subzerocloud/pg-amqp-bridge)<br>
 ✓ [Lua](https://www.lua.org/) functions to hook into each stage of the HTTP request and add custom logic (integrate 3rd party systems)<br>
 ✓ Debugging and live code reloading (sql/configs/lua) functionality using [subZero devtools](https://github.com/subzerocloud/devtools)<br>
 ✓ SQL unit test using [pgTAP](http://pgtap.org/)<br>
@@ -50,10 +57,11 @@ backends with [PostgREST](https://postgrest.com).
 ```
 
 
-## Getting Started
+## Installation
 
-Make sure that you have [Docker](https://www.docker.com/community-edition) v17 or newer installed, clone the repo and launch the app with [Docker
-Compose](https://docs.docker.com/compose/):
+Make sure that you have [Docker](https://www.docker.com/community-edition) v17 or newer installed.
+
+Clone the repo and launch the app with [Docker Compose](https://docs.docker.com/compose/):
 
 ```bash
 git clone --single-branch https://github.com/subzerocloud/postgrest-starter-kit example-api
@@ -68,7 +76,21 @@ Try a simple request
 curl http://localhost:8080/rest/items?id=eq.1
 ```
 
+## Development workflow and debugging
+
+Download and install [subZero devtools](https://github.com/subzerocloud/devtools) for your OS.<br />
+Execute `sz` (of the name you used to symlink the binary) in the root of your project.<br />
+After this step you can view the logs of all the stack components (SQL queries will also be logged).
+If you edit a sql/conf/lua file in your project, the changes will immediately be applied.
+
+
 ## Testing
+
+The starter kit comes with a testing infrastructure setup. 
+You can write pgTAP tests that run directly in your database, useful for testing the logic that resides in your database (user privileges, Row Level Security, stored procedures).
+Integration tests are written in JavaScript.
+
+Here is how you run them
 
 ```bash
 npm install                     # Install test dependencies
@@ -88,26 +110,17 @@ git fetch upstream
 git merge upstream/master
 ```
 
-
-## Development workflow and debugging
-
-Download and install [subZero devtools](https://github.com/subzerocloud/devtools) for your OS.<br />
-Execute `sz` (of the name you used to symlink the binary) in the root of your project.<br />
-After this step you can view the logs of all the stack components (SQL queries will also be logged).
-If you edit and sql/conf/lua file in your project, the changes will immediately be applied.
-
-
-![DevTools](https://github.com/subzerocloud/devtools/blob/master/screenshot.png?raw=true "DevTools")
-
 ## Deployment
 
-There are two stages when going into production.
+We are currently working on a CloudFormation based stack setup [here](/pull/5)
 
-### Deploying your database code
+There are two stages when going to production.
+
+#### Deploying your database code
 In production you should use [RDS](https://aws.amazon.com/rds/postgresql/) or a similar service.
 We'll soon have examples on how to migrate SQL code from dev to production
 
-### Deploying PostgREST and OpenResty
+#### Deploying PostgREST and OpenResty
 We recommend deploying both components (OpenResty/PostgREST) as Docker containers.
 You can use [EC2 Container Service](https://aws.amazon.com/ecs/) to help solve a lot of devops problems when deploying containers.
 We'll soon provide task definition templates. For PostgREST you can use the official image in production. For OpenResty you will build your own image that is based on the official one but includes all your custom configurations and files.

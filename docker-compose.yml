@@ -1,6 +1,49 @@
 version: '2'
 services:
 
+  # This is the database to which the all the other components in the stack will connect and interact with
+  # (but mostly it's PostgREST that is going to be responsible for the bulk of the db traffic)
+  # Having the database in a container is very convinient in development but in production you will
+  # use a separate database instance, like Amazon RDS, i.e. in production this section will be
+  # commented and in the .env file you will specify the ip of your separate database instance
+  db:
+    image: postgres
+    ports:
+      - "5432:5432"
+    environment:
+      # env vars specific to postgres image used on first boot
+      - POSTGRES_USER=${SUPER_USER}
+      - POSTGRES_PASSWORD=${SUPER_USER_PASSWORD}
+      - POSTGRES_DB=${DB_NAME}
+      # env vars useful for our sql scripts
+      - SUPER_USER=${SUPER_USER}
+      - SUPER_USER_PASSWORD=${SUPER_USER_PASSWORD}
+      - DB_NAME=${DB_NAME}
+      - DB_USER=${DB_USER}
+      - DB_PASS=${DB_PASS}
+      - DEVELOPMENT=${DEVELOPMENT}
+      - JWT_SECRET=${JWT_SECRET}
+
+    volumes:
+      - "./db/src:/docker-entrypoint-initdb.d"
+
+  # PostgREST instance, is responsible for communicating with the database
+  # and providing a REST api, (almost) every request that is sent to the database goes through it
+  postgrest:
+    image: subzerocloud/postgrest
+    ports:
+      - "3000:3000"
+    links:
+      - db:db
+    environment:
+      - DB_URI=postgres://${DB_USER}:${DB_PASS}@${DB_HOST}:${DB_PORT}/${DB_NAME}
+      - DB_SCHEMA=${DB_SCHEMA}
+      - DB_ANON_ROLE=${DB_ANON_ROLE}
+      - DB_POOL=${DB_POOL}
+      - JWT_SECRET=${JWT_SECRET}
+      - MAX_ROWS=${MAX_ROWS}
+      - PRE_REQUEST=${PRE_REQUEST}
+
   # OpenResty (Nginx + Lua) instance that sits in front of PostgREST.
   # All the requests comming into the system are first hitting this component.
   # After after some processing/checks and transformation, the request is forwarded
@@ -31,49 +74,20 @@ services:
       - "./openresty/nginx/html:/usr/local/openresty/nginx/html"
       - "./openresty/lualib/user_code:/usr/local/openresty/lualib/user_code"
 
-  # PostgREST instance, is responsible for communicating with the database
-  # and providing a REST api, (almost) every request that is sent to the database goes through it
-  postgrest:
-    image: subzerocloud/postgrest
-    ports:
-      - "3000:3000"
+  # pg-amqp-bridget instance is responsible for forwarding NOTIFY events in PostgreSQL
+  # to RabbitMQ based on the BRIDGE_CHANNELS configuration
+  pg_amqp_bridge:
+    image: subzerocloud/pg-amqp-bridge
     links:
-      - db:db
+      - db
+      - rabbitmq
     environment:
-      - DB_URI=postgres://${DB_USER}:${DB_PASS}@${DB_HOST}:${DB_PORT}/${DB_NAME}
-      - DB_SCHEMA=${DB_SCHEMA}
-      - DB_ANON_ROLE=${DB_ANON_ROLE}
-      - DB_POOL=${DB_POOL}
-      - JWT_SECRET=${JWT_SECRET}
-      - MAX_ROWS=${MAX_ROWS}
-      - PRE_REQUEST=${PRE_REQUEST}
+      - POSTGRESQL_URI=postgres://${DB_USER}:${DB_PASS}@${DB_HOST}:${DB_PORT}/${DB_NAME}
+      - AMQP_URI=amqp://${RABBITMQ_DEFAULT_USER}:${RABBITMQ_DEFAULT_PASS}@rabbitmq//
+      - BRIDGE_CHANNELS=events:amq.topic
 
-  # This is the database to which the all the other components in the stack will connect and interact with
-  # (but mostly it's PostgREST that is going to be responsible for the bulk of the db traffic)
-  # Having the database in a container is very convinient in development but in production you will
-  # use a separate database instance, like Amazon RDS, i.e. in production this section will be
-  # commented and in the .env file you will specify the ip of your separate database instance
-  db:
-    image: postgres
-    ports:
-      - "5432:5432"
-    environment:
-      # env vars specific to postgres image used on first boot
-      - POSTGRES_USER=${SUPER_USER}
-      - POSTGRES_PASSWORD=${SUPER_USER_PASSWORD}
-      - POSTGRES_DB=${DB_NAME}
-      # env vars useful for our sql scripts
-      - SUPER_USER=${SUPER_USER}
-      - SUPER_USER_PASSWORD=${SUPER_USER_PASSWORD}
-      - DB_NAME=${DB_NAME}
-      - DB_USER=${DB_USER}
-      - DB_PASS=${DB_PASS}
-      - DEVELOPMENT=${DEVELOPMENT}
-      - JWT_SECRET=${JWT_SECRET}
-
-    volumes:
-      - "./db/src:/docker-entrypoint-initdb.d"
-
+  # RabbitMQ instance can be used to consolidate events that originated in your database/application.
+  # You can connect here with different conumsers and take actions based on those events (like sending sigup emails)
   rabbitmq:
     image: rabbitmq:3-management
     ports:
@@ -84,12 +98,3 @@ services:
       - RABBITMQ_DEFAULT_USER=${RABBITMQ_DEFAULT_USER}
       - RABBITMQ_DEFAULT_PASS=${RABBITMQ_DEFAULT_PASS}
 
-  pg_amqp_bridge:
-    image: subzerocloud/pg-amqp-bridge
-    links:
-      - db
-      - rabbitmq
-    environment:
-      - POSTGRESQL_URI=postgres://${DB_USER}:${DB_PASS}@${DB_HOST}:${DB_PORT}/${DB_NAME}
-      - AMQP_URI=amqp://${RABBITMQ_DEFAULT_USER}:${RABBITMQ_DEFAULT_PASS}@rabbitmq//
-      - BRIDGE_CHANNELS=events:amq.topic
