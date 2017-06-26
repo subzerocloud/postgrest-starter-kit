@@ -25,6 +25,11 @@ end
 $$ language plpgsql;
 
 create trigger users_encrypt_pass_trigger
-  before insert or update on data.users
-  for each row
-  execute procedure data.encrypt_pass();
+before insert or update on data.users
+for each row
+execute procedure data.encrypt_pass();
+
+create trigger send_change_event
+after insert or update or delete on data.users
+for each row execute procedure rabbitmq.on_row_change();
+

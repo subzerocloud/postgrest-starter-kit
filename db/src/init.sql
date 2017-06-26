@@ -16,6 +16,9 @@ begin;
 \ir request/schema.sql
 \ir request/user.sql
 
+-- functions for sending messages to RabbitMQ entities
+\ir rabbitmq/schema.sql
+
 -- private schema where all tables will be defined
 -- you can use othere names besides "data" or even spread the tables
 -- between different schemas. The schema name "data" is just a convention

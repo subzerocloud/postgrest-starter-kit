@@ -17,6 +17,9 @@ grant execute on function api.login(text,text) to webuser;
 -------------------------------------------------------------------------------
 -- refresh_token
 grant execute on function api.refresh_token() to webuser;
+-- rabbitmq
+grant usage on schema rabbitmq to webuser;
+grant usage on schema rabbitmq to anonymous;
 -------------------------------------------------------------------------------
 -- items
 -- give access to the view owner to this table
@@ -79,4 +82,3 @@ with check (
 grant select, insert, update, delete on api.subitems to webuser;
 grant select on api.subitems to anonymous;
 -------------------------------------------------------------------------------
-
