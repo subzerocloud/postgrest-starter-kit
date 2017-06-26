@@ -2,14 +2,14 @@
 create schema rabbitmq;
 
 create or replace function rabbitmq.send_message(
-	channel text,
-	routing_key text,
-	message text) returns void as $$
+  channel text,
+  routing_key text,
+  message text) returns void as $$
      
-	select	pg_notify(
-		channel,	
+  select  pg_notify(
+    channel,  
     routing_key || '|' || message
-	);
+  );
 $$ stable language sql;
 
 create or replace function rabbitmq.on_row_change() returns trigger as $$
@@ -27,7 +27,7 @@ create or replace function rabbitmq.on_row_change() returns trigger as $$
     elsif (TG_OP = 'INSERT') then
         row := new;
     end if;
-    perform rabbitmq.send_message('app_events', routing_key, row_to_json(row)::text);
+    perform rabbitmq.send_message('events', routing_key, row_to_json(row)::text);
     return null;
   end;
 $$ stable language plpgsql;

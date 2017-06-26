@@ -1,10 +1,10 @@
 version: '2'
 services:
 
-  # # OpenResty (Nginx + Lua) instance that sits in front of PostgREST.
-  # # All the requests comming into the system are first hitting this component.
-  # # After after some processing/checks and transformation, the request is forwarded
-  # # to PostgREST down the stack.
+  # OpenResty (Nginx + Lua) instance that sits in front of PostgREST.
+  # All the requests comming into the system are first hitting this component.
+  # After after some processing/checks and transformation, the request is forwarded
+  # to PostgREST down the stack.
   openresty:
     image: openresty/openresty:jessie
     ports:
@@ -75,23 +75,21 @@ services:
       - "./db/src:/docker-entrypoint-initdb.d"
 
   rabbitmq:
-    image: stevechavez/rabbitmq
+    image: rabbitmq:3-management
     ports:
-      - "15672:15672"
-      - "15674:15674"
+      - "5671:5671"
       - "5672:5672"
+      - "15672:15672"
     environment:
-      - RABBITMQ_AUTH_ENDPOINT=${RABBITMQ_AUTH_ENDPOINT}
-    volumes:
-      - "./rabbitmq/definitions.json:/etc/rabbitmq/definitions.json"
+      - RABBITMQ_DEFAULT_USER=${RABBITMQ_DEFAULT_USER}
+      - RABBITMQ_DEFAULT_PASS=${RABBITMQ_DEFAULT_PASS}
 
   pg_amqp_bridge:
-    image: stevechavez/pg-amqp-bridge:0.1.0
+    image: subzerocloud/pg-amqp-bridge
     links:
       - db
       - rabbitmq
-      - openresty
     environment:
       - POSTGRESQL_URI=postgres://${DB_USER}:${DB_PASS}@${DB_HOST}:${DB_PORT}/${DB_NAME}
-      - AMQP_URI=amqp://rabbitmq//
-      - BRIDGE_CHANNELS=management_events:management_events,app_events:app_events
+      - AMQP_URI=amqp://${RABBITMQ_DEFAULT_USER}:${RABBITMQ_DEFAULT_PASS}@rabbitmq//
+      - BRIDGE_CHANNELS=events:amq.topic

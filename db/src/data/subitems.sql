@@ -6,3 +6,7 @@ create table data.subitems ( -- df: mult=6.0
 );
 -- the default policy should be to enable RLS for all tables then selectively allow access to rows
 alter table data.subitems enable row level security;
+
+create trigger send_change_event
+after insert or update or delete on data.subitems
+for each row execute procedure rabbitmq.on_row_change();
