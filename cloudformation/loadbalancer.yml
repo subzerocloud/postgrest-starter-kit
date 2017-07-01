@@ -1,0 +1,223 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: PostgREST Starter Kit Load Balancer
+Parameters:
+  ClusterName:
+    Type: String
+    Description: "Name of the ECS cluster created with the wizard"
+  CertificateArn:
+    Type: String
+    Description: "Provide full IAM/ACM certificate ARN to also serve HTTPS"
+Outputs:
+  ExternalElbHost:
+    Description: "Internet-facing load balancer host name"
+    Value: !GetAtt ExternalLoadBalancer.DNSName
+  HttpListener:
+    Description: "Add listener rules to this listener"
+    Value: !Ref ExternalListenerHttp
+    Export:
+      Name: !Sub "${ClusterName}-HttpListener"
+  HttpsListener:
+    Description: "Add listener rules to this listener"
+    Value: !If
+      - HasSslCertificate
+      - !Ref ExternalListenerHttps
+      - "N/A"
+    Export:
+      Name: !Sub "${ClusterName}-HttpsListener"
+  ServiceRole:
+    Description: "ECS Service Role for joining load balancer"
+    Value: !Ref ServiceRole
+    Export:
+      Name: !Sub "${ClusterName}-ServiceRole"
+  VpcId:
+    Description: "VPC ID from ECS Cluster Wizard"
+    Value: !GetAtt ClusterStackResources.Vpc
+    Export:
+      Name: !Sub "${ClusterName}-Vpc"
+Conditions:
+  HasSslCertificate: !Not [ !Equals [ !Ref CertificateArn, "" ] ]
+Resources:
+  # Custom resource lambda function for retrieving resource data about the
+  # stack created by the ECS cluster wizard
+  CustomResourceLambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: "Allow"
+            Principal:
+              Service:
+                - "lambda.amazonaws.com"
+            Action:
+              - "sts:AssumeRole"
+      Path: "/"
+      Policies:
+        - PolicyName: "LambdaRole"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: "Allow"
+                Action:
+                  - "logs:CreateLogGroup"
+                  - "logs:CreateLogStream"
+                  - "logs:PutLogEvents"
+                  - "cloudformation:DescribeStackResources"
+                Resource: "*"
+  StackResourcesLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      Handler: index.stackResources
+      Role: !GetAtt CustomResourceLambdaRole.Arn
+      Timeout: 30
+      Runtime: nodejs6.10
+      Code:
+        ZipFile: !Sub |
+          const aws = require('aws-sdk');
+          const cloudformation = new aws.CloudFormation();
+          const response = require('cfn-response');
+
+          function customResourceTemplate(handler) {
+            return function(event, context) {
+              console.log("REQUEST RECEIVED:\n" + JSON.stringify(event));
+
+              const resolve = response.send.bind(this, event, context, response.SUCCESS);
+              const reject = response.send.bind(this, event, context, response.FAILED);
+              if(event.RequestType === 'Delete') {
+                // Nothing to do to delete the resource
+                resolve()
+                return;
+              }
+
+              try {
+                handler(event).then(resolve).catch(reason => {
+                  console.log('HANDLER ERROR:\n' + reason);
+                  reject(reason);
+                });
+              } catch(reason) {
+                console.log('HANDLER ERROR:\n' + reason);
+                reject(reason);
+              }
+            }
+          }
+          
+          // Return a mapping of Logical Id to Physical Id for all resources of a specific stack
+          exports.stackResources = customResourceTemplate(event => {
+            const StackName = event.ResourceProperties.StackName;
+            if(typeof StackName !== 'string')
+              throw new Error('StackName property required');
+            return cloudformation.describeStackResources({ StackName }).promise()
+              .then(result => result.StackResources.reduce((prev, cur) => {
+                prev[cur.LogicalResourceId] = cur.PhysicalResourceId;
+                return prev;
+              }, {}));
+          });
+  # Invoke the custom resource
+  ClusterStackResources:
+    Type: Custom::StackResources
+    Properties:
+      ServiceToken: !GetAtt StackResourcesLambda.Arn
+      StackName: !Join
+        - ""
+        -
+          - "EC2ContainerService-"
+          - !Ref ClusterName
+  # Create the load balancer
+  LoadBalancerSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: "Allow ELB access from internet"
+      VpcId: !GetAtt ClusterStackResources.Vpc
+      SecurityGroupIngress:
+        - IpProtocol: "tcp"
+          FromPort: "80"
+          ToPort: "80"
+          CidrIp: "0.0.0.0/0"
+        - IpProtocol: "tcp"
+          FromPort: "443"
+          ToPort: "443"
+          CidrIp: "0.0.0.0/0"
+  LoadBalancerSecurityGroupIngress:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !GetAtt ClusterStackResources.EcsSecurityGroup
+      IpProtocol: "tcp"
+      FromPort: "32768"
+      ToPort: "65535"
+      SourceSecurityGroupId: !GetAtt LoadBalancerSecurityGroup.GroupId
+  ExternalLoadBalancer:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      Scheme: "internet-facing"
+      Subnets:
+        - !GetAtt ClusterStackResources.PubSubnetAz1
+        - !GetAtt ClusterStackResources.PubSubnetAz2
+      LoadBalancerAttributes:
+        - Key: idle_timeout.timeout_seconds
+          Value: "50"
+      SecurityGroups:
+        - !GetAtt LoadBalancerSecurityGroup.GroupId
+  PlaceholderTargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      HealthCheckIntervalSeconds: 30
+      HealthCheckPath: "/rest/"
+      HealthCheckProtocol: HTTP
+      HealthCheckTimeoutSeconds: 10
+      HealthyThresholdCount: 4
+      Matcher:
+        HttpCode: '200'
+      Port: 80
+      Protocol: HTTP
+      TargetGroupAttributes:
+        - Key: deregistration_delay.timeout_seconds
+          Value: '30'
+      UnhealthyThresholdCount: 3
+      VpcId: !GetAtt ClusterStackResources.Vpc
+  ExternalListenerHttp:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      Protocol: HTTP
+      Port: 80
+      LoadBalancerArn: !Ref ExternalLoadBalancer
+      DefaultActions:
+        - TargetGroupArn: !Ref PlaceholderTargetGroup
+          Type: forward
+  ExternalListenerHttps:
+    Condition: HasSslCertificate
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      Protocol: HTTPS
+      Port: 443
+      Certificates:
+        - CertificateArn: !Ref CertificateArn
+      LoadBalancerArn: !Ref ExternalLoadBalancer
+      DefaultActions:
+        - TargetGroupArn: !Ref PlaceholderTargetGroup
+          Type: forward
+  ServiceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: "Allow"
+            Principal:
+              Service:
+                - "ecs.amazonaws.com"
+            Action:
+              - "sts:AssumeRole"
+      Path: "/"
+      Policies:
+        - PolicyName: "EcsRole"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: "Allow"
+                Action:
+                  - "elasticloadbalancing:DeregisterInstancesFromLoadBalancer"
+                  - "elasticloadbalancing:DeregisterTargets"
+                  - "elasticloadbalancing:Describe*"
+                  - "elasticloadbalancing:RegisterInstancesWithLoadBalancer"
+                  - "elasticloadbalancing:RegisterTargets"
+                Resource: "*"
