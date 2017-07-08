@@ -129,7 +129,7 @@ We'll soon provide task definition templates. For PostgREST you can use the offi
 
 Anyone and everyone is welcome to contribute.
 
-## Support
+## Support and Documentation
 * [Wiki](https://github.com/subzerocloud/postgrest-starter-kit/wiki) — a more detailed view of the architecture
 * [PostgREST API Referrance](https://postgrest.com/en/stable/api.html)
 * [PostgreSQL Manual](https://www.postgresql.org/docs/current/static/index.html)
