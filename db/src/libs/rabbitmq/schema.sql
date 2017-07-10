@@ -1,5 +1,6 @@
-\echo # Loading rabbitmq schema
+drop schema if exists rabbitmq cascade;
 create schema rabbitmq;
+grant usage on schema rabbitmq to public;
 
 create or replace function rabbitmq.send_message(
   channel text,

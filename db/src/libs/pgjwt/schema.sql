@@ -6,7 +6,7 @@
 -- At th same time this goes to show the powerful features you have at your disposal of the psql meta commands
 
 -- decide what is our base dir and the location of the file
-\setenv JWT_FILE :base_dir/pgjwt/pgjwt--0.0.1.sql
+\setenv JWT_FILE :base_dir/libs/pgjwt/pgjwt--0.0.1.sql
 
 -- load sql definition in a variable and use sed to make the needed changes
 \set pgjwt_schema pgjwt
