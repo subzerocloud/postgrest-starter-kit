@@ -72,7 +72,7 @@ The API server must become available at [http://localhost:8080/rest](http://loca
 Try a simple request
 
 ```bash
-curl http://localhost:8080/rest/items?id=eq.1
+curl http://localhost:8080/rest/todos?select=id,todo
 ```
 
 ## Development workflow and debugging
