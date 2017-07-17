@@ -32,9 +32,8 @@ PostgREST enables a different way of building data driven API backends. It does 
 │   ├── src                   # Schema definition
 │   │   ├── api               # Api entities avaiable as REST endpoints
 │   │   ├── data              # Definition of source tables that hold the data
-│   │   ├── pgjwt             # JWT util functions
-│   │   ├── request           # HTTP request helper functions
-│   │   ├── roles             # Application level roles and their privileges
+│   │   ├── libs              # A collection modules of used throughout the code
+│   │   ├── authorization     # Application level roles and their privileges
 │   │   ├── sample_data       # A few sample rows
 │   │   └── init.sql          # Schema definition entry point
 │   └── tests                 # pgTap tests
