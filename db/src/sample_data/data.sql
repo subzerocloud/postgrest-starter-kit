@@ -9,16 +9,16 @@
 -- Version 2.0.1-dev (r832 on 2015-11-01)
 -- For postgresql on 2017-05-03T12:34:39.879063 (UTC)
 -- 
--- fill table data.users (2)
-\echo # filling table data.users (2)
-COPY data.users (id,name,email,"password") FROM STDIN (FREEZE ON);
+-- fill table data.user (2)
+\echo # filling table data.user (2)
+COPY data.user (id,name,email,"password") FROM STDIN (FREEZE ON);
 1	alice	alice@email.com	pass
 2	bob	bob@email.com	pass
 \.
 -- 
--- fill table data.items (6)
-\echo # filling table data.items (6)
-COPY data.items (id,name,private,owner_id) FROM STDIN (FREEZE ON);
+-- fill table data.todo (6)
+\echo # filling table data.todo (6)
+COPY data.todo (id,todo,private,owner_id) FROM STDIN (FREEZE ON);
 1	item_1	FALSE	1
 2	item_2	TRUE	1
 3	item_3	FALSE	1
@@ -27,29 +27,10 @@ COPY data.items (id,name,private,owner_id) FROM STDIN (FREEZE ON);
 6	item_6	FALSE	2
 \.
 -- 
--- fill table data.subitems (12)
-\echo # filling table data.subitems (12)
-COPY data.subitems (id,name,item_id,owner_id) FROM STDIN (FREEZE ON);
-1	subitem_1	1	1
-2	subitem_2	1	1
-3	subitem_3	2	1
-4	subitem_4	2	1
-5	subitem_5	3	1
-6	subitem_6	3	1
-7	subitem_7	4	2
-8	subitem_8	4	2
-9	subitem_9	5	2
-10	subitem_10	5	2
-11	subitem_11	6	2
-12	subitem_12	6	2
-\.
--- 
 -- restart sequences
-ALTER SEQUENCE data.users_id_seq RESTART WITH 3;
-ALTER SEQUENCE data.items_id_seq RESTART WITH 7;
-ALTER SEQUENCE data.subitems_id_seq RESTART WITH 13;
+ALTER SEQUENCE data.user_id_seq RESTART WITH 3;
+ALTER SEQUENCE data.todo_id_seq RESTART WITH 7;
 -- 
 -- analyze modified tables
-ANALYZE data.users;
-ANALYZE data.items;
-ANALYZE data.subitems;
+ANALYZE data.user;
+ANALYZE data.todo;

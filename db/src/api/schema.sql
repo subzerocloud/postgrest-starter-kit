@@ -1,6 +1,6 @@
-\echo # Loading api schema
 drop schema if exists api cascade;
 create schema api;
+set search_path = api, public;
 
 -- this role will be used as the owner of the views in the api schema
 -- it is used in the definition of the RLS policies for tables accessed
@@ -8,10 +8,10 @@ create schema api;
 drop role if exists api;
 create role api;
 
-\ir me.sql
-\ir items.sql
-\ir subitems.sql
-\ir signup.sql
-\ir login.sql
-\ir refresh_token.sql
+-- redifine this type to control the user properties returned by auth endpoints
+\ir ../libs/auth/api/user_type.sql
+-- include all auth endpoints
+\ir ../libs/auth/api/all.sql
 
+-- our endpoints
+\ir todos.sql
