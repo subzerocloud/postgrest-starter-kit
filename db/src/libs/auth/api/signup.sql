@@ -1,16 +1,23 @@
 create or replace function signup(name text, email text, password text) returns session as $$
 declare
-    usr data.user;
+    usr record;
+    result record;
 begin
-    insert into data.user
+	EXECUTE 'SET search_path TO ' || quote_ident(settings.get('auth.data-schema')) || ', public';
+    insert into "user" as u
     (name, email, password) values
     ($1, $2, $3)
-    returning * into usr;
+    returning row_to_json(u.*) as j into usr;
 
-    return (
-        row_to_json(json_populate_record(null::"user", row_to_json(usr))),
-        auth.sign_jwt(auth.get_jwt_payload(usr))
+    EXECUTE 'SET search_path TO ' || quote_ident(settings.get('auth.api-schema')) || ', public';
+    result := (
+        row_to_json(json_populate_record(null::"user", usr.j)),
+        auth.sign_jwt(auth.get_jwt_payload(usr.j))
     );
+
+
+    RESET search_path;
+    return result;
 end
 $$ security definer language plpgsql;
 

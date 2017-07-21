@@ -26,10 +26,10 @@ create or replace function sign_jwt(json) returns text as $$
     select pgjwt.sign($1, settings.get('jwt_secret'))
 $$ stable language sql;
 
-create or replace function get_jwt_payload(anyelement) returns json as $$
+create or replace function get_jwt_payload(json) returns json as $$
     select json_build_object(
-                'role', $1.role,
-                'user_id', $1.id,
+                'role', $1->'role',
+                'user_id', $1->'id',
                 'exp', extract(epoch from now())::integer + settings.get('jwt_lifetime')::int -- token expires in 1 hour
             )
 $$ stable language sql;

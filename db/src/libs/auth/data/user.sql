@@ -1,3 +1,4 @@
+select settings.set('auth.data-schema', current_schema);
 create table "user" (
 	id                   serial primary key,
 	name                 text not null,

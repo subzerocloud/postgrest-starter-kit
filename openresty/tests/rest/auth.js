@@ -35,6 +35,20 @@ describe('auth', function() {
       })
   });
 
+  it('refresh_token', function(done) {
+    rest_service()
+      .post('/rpc/refresh_token')
+      .set('Accept', 'application/vnd.pgrst.object+json')
+      .set('Authorization', 'Bearer ' + jwt)
+      .send({})
+      .expect('Content-Type', /json/)
+      .expect(200, done)
+      .expect( r => {
+        //console.log(r.body)
+        r.body.length.should.above(0);
+      })
+  });
+
   it('signup', function(done) {
     rest_service()
       .post('/rpc/signup')

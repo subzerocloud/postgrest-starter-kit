@@ -1,21 +1,29 @@
-set search_path = api, public;
+
 create or replace function login(email text, password text) returns session as $$
 declare
-    usr data.user;
+    usr record;
+    result session;
 begin
-    select * into usr
-    from data.user as u
+    EXECUTE 'SET search_path TO ' || quote_ident(settings.get('auth.data-schema')) || ', public';
+
+    select row_to_json(u.*) as j into usr
+    from "user" as u
     where u.email = $1 and u.password = crypt($2, u.password);
+    
 
     if not found then
+        RESET search_path;
         raise exception 'invalid email/password';
     else
-        return (
-            row_to_json(json_populate_record(null::"user", row_to_json(usr))),
-            auth.sign_jwt(auth.get_jwt_payload(usr))
+        EXECUTE 'SET search_path TO ' || quote_ident(settings.get('auth.api-schema')) || ', public';
+        result = (
+            row_to_json(json_populate_record(null::"user", usr.j)),
+            auth.sign_jwt(auth.get_jwt_payload(usr.j))
         );
+        RESET search_path;
+        return result;
     end if;
 end
-$$ stable security definer language plpgsql;
+$$ security definer language plpgsql;
 -- by default all functions are accessible to the public, we need to remove that and define our specific access rules
 revoke all privileges on function login(text, text) from public;
