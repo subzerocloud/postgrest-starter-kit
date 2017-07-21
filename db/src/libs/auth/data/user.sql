@@ -4,7 +4,7 @@ create table "user" (
 	name                 text not null,
 	email                text not null unique,
 	"password"           text not null,
-	"role"				 user_role not null default 'webuser',
+	"role"				 user_role not null default settings.get('auth.default-role')::user_role,
 
 	check (length(name)>2),
 	check (email ~* '^[A-Za-z0-9._%-]+@[A-Za-z0-9.-]+[.][A-Za-z]+$')

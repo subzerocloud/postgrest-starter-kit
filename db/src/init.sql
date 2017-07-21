@@ -26,6 +26,12 @@ begin;
 -- functions for sending messages to RabbitMQ entities
 \ir libs/rabbitmq/schema.sql
 
+-- save app settings
+select settings.set('jwt_secret', :quoted_jwt_secret);
+select settings.set('jwt_lifetime', '3600');
+select settings.set('auth.default-role', 'webuser');
+
+
 \echo # Loading application definitions
 -- private schema where all tables will be defined
 -- you can use othere names besides "data" or even spread the tables
@@ -44,9 +50,6 @@ begin;
 \echo # Loading sample data
 \ir sample_data/data.sql
 
--- save app settings
-select settings.set('jwt_secret', :quoted_jwt_secret);
-select settings.set('jwt_lifetime', '3600');
 
 commit;
 \echo # ==========================================
