@@ -2,7 +2,7 @@ begin;
 select * from no_plan();
 
 select * from check_test(
-    views_are('api', array['items', 'subitems'], 'tables present' ),
+    views_are('api', array['todos'], 'tables present' ),
     true,
     'all views are present in api schema',
     'tables present',
