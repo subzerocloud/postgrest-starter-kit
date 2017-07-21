@@ -2,7 +2,7 @@
 create or replace function login(email text, password text) returns session as $$
 declare
     usr record;
-    result session;
+    result record;
 begin
     EXECUTE 'SET search_path TO ' || quote_ident(settings.get('auth.data-schema')) || ', public';
 

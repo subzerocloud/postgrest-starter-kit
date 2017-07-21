@@ -8,8 +8,6 @@
 -- it can only switch to other roles
 drop role if exists :authenticator;
 create role :"authenticator" with login password :'authenticator_pass';
--- some functions from auth lib rely on search_path to work to find the "user" type, this is where we set it
-alter user :"authenticator" set search_path = api,public;
 
 -- this is an application level role
 -- requests that are not authenticated will be executed with this role's privileges
