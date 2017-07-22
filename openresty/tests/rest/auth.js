@@ -3,7 +3,7 @@ const request = require('supertest');
 const should = require("should");
 
 describe('auth', function() {
-  after(function(done){ resetdb(); done(); });
+  before(function(done){ resetdb(); done(); });
   
   it('login', function(done) {
     rest_service()

@@ -3,7 +3,7 @@ const request = require('supertest');
 const should = require("should");
 
 describe('read', function() {
-  after(function(done){ resetdb(); done(); });
+  before(function(done){ resetdb(); done(); });
   
   it('basic', function(done) {
     rest_service()
