@@ -15,14 +15,23 @@ const DB_HOST = process.env.DB_HOST;
 const DB_NAME = process.env.DB_NAME;
 const PG = `${COMPOSE_PROJECT_NAME}_db_1`
 
+const psql_version = spawnSync('psql', ['--version']);
+const have_psql = (psql_version.stdout && psql_version.stdout.toString('utf8').trim().length > 0)
+
+
 var rest_service = function() { 
   return request('http://localhost:8080/rest');
 }
 
 const resetdb = () => {
-  const pg = spawnSync('docker', ['exec', PG, 'psql', '-U', SUPER_USER, DB_NAME, '-f', 'docker-entrypoint-initdb.d/sample_data/reset.sql'])
-  // console.log (pg.stdout.toString('utf8') )
-  // console.log (pg.stderr.toString('utf8') )
+  if (have_psql){
+    var env = Object.create( process.env );
+    env.PGPASSWORD = SUPER_USER_PASSWORD
+    const pg = spawnSync('psql', ['-h', 'localhost', '-U', SUPER_USER, DB_NAME, '-f', process.env.PWD + '/db/src/sample_data/reset.sql'], { env: env })
+  }
+  else{
+    const pg = spawnSync('docker', ['exec', PG, 'psql', '-U', SUPER_USER, DB_NAME, '-f', 'docker-entrypoint-initdb.d/sample_data/reset.sql'])
+  }
 }
 
 module.exports = {
