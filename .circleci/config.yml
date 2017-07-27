@@ -14,24 +14,42 @@ jobs:
       - checkout
 
 
-      # Download and cache dependencies
+      # Download and cache npm dependencies
       - restore_cache:
           keys:
-          - v1-dependencies-{{ checksum "package.json" }}
+          - v1-npm-dependencies-{{ checksum "package.json" }}
           # fallback to using the latest cache if no exact match is found
-          - v1-dependencies-
+          - v1-npm-dependencies-
 
       - run: npm install
 
       - save_cache:
           paths:
             - node_modules
-          key: v1-dependencies-{{ checksum "package.json" }}
+          key: v1-npm-dependencies-{{ checksum "package.json" }}
+
+      # Download and cache docker images dependencies
+    #   - restore_cache:
+    #       keys:
+    #       - v1-npm-dependencies-{{ checksum "docker-compose.yml" }}
+    #       # fallback to using the latest cache if no exact match is found
+    #       - v1-npm-dependencies-
+
+      - run: docker pull postgres
+      - run: docker pull subzerocloud/postgrest
+      - run: docker pull openresty/openresty:jessie
+      - run: docker pull subzerocloud/pg-amqp-bridge
+      - run: docker pull rabbitmq:3-management
+      - run: docker pull lren/pgtap
+
+
+    #   - save_cache:
+    #       paths:
+    #         - node_modules
+    #       key: v1-npm-dependencies-{{ checksum "docker-compose.yml" }}
       
     #   - setup_remote_docker:
     #       reusable: true
-
-      - run: echo "hello world"
 
       - run: docker-compose up -d
             
