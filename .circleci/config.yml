@@ -1,8 +1,12 @@
 version: 2
 jobs:
   build:
-    docker:
+    machine:
+      - enabled: true
       - image: circleci/node:latest
+
+    # docker:
+    #   - image: circleci/node:latest
 
     working_directory: ~/repo
 
@@ -24,18 +28,12 @@ jobs:
             - node_modules
           key: v1-dependencies-{{ checksum "package.json" }}
       
-      - setup_remote_docker:
-          reusable: true
+    #   - setup_remote_docker:
+    #       reusable: true
 
       - run: echo "hello world"
 
-      - run:
-          name: Stack Up
-          working_directory: ~/repo
-          command: |
-            ls -al
-            sleep 5
-            docker-compose up -d
+      - run: docker-compose up -d
             
 
       # run tests!
