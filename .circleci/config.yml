@@ -3,7 +3,7 @@ jobs:
   build:
     machine:
       enabled: true
-      image: circleci/node:latest
+    #   image: circleci/node:latest
 
     # docker:
     #   - image: circleci/node:latest
