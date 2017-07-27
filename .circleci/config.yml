@@ -24,17 +24,19 @@ jobs:
             - node_modules
           key: v1-dependencies-{{ checksum "package.json" }}
       
-    #   - setup_remote_docker:
-    #       reusable: true
-      - run: curl -sSL https://get.docker.com/ | sh 
+      - setup_remote_docker:
+          reusable: true
+
       - run: echo "hello world"
 
       - run:
           name: Stack Up
           working_directory: ~/repo
           command: |
-            docker-compose up -d
+            ls -al
             sleep 5
+            docker-compose up -d
+            
 
       # run tests!
       - run: npm test
