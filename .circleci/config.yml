@@ -9,10 +9,10 @@ jobs:
     #   - image: circleci/node:latest
 
     working_directory: ~/repo
-
+    environment:
+      - sqitch: "docker run --rm docteurklein/sqitch:pgsql"
     steps:
       - checkout
-
 
       # Download and cache npm dependencies
       - restore_cache:
@@ -28,33 +28,25 @@ jobs:
             - node_modules
           key: v1-npm-dependencies-{{ checksum "package.json" }}
 
-      # Download and cache docker images dependencies
-    #   - restore_cache:
-    #       keys:
-    #       - v1-npm-dependencies-{{ checksum "docker-compose.yml" }}
-    #       # fallback to using the latest cache if no exact match is found
-    #       - v1-npm-dependencies-
-
+      # Download docker images (cache?)
       - run: docker pull postgres
       - run: docker pull subzerocloud/postgrest
       - run: docker pull openresty/openresty:jessie
       - run: docker pull subzerocloud/pg-amqp-bridge
       - run: docker pull rabbitmq:3-management
       - run: docker pull lren/pgtap
+      - run: docker pull docteurklein/sqitch:pgsql
 
-
-    #   - save_cache:
-    #       paths:
-    #         - node_modules
-    #       key: v1-npm-dependencies-{{ checksum "docker-compose.yml" }}
-      
-    #   - setup_remote_docker:
-    #       reusable: true
-
+      # bring up the application
       - run: docker-compose up -d
-            
 
-      # run tests!
+      # run tests
       - run: npm test
 
+      # build images & deploy
+      - run: $sqitch --help
+      - run: docker build -t openresty ./openresty/
+    #   - run: docker tag openresty $OPENRESTY_REPO_URI:latest
+    #   - run: aws ecr get-login --no-include-email | sh
+    #   - run: docker push $REMOTE_REPO:latest
 
