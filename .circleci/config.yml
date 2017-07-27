@@ -2,8 +2,8 @@ version: 2
 jobs:
   build:
     machine:
-      - enabled: true
-      - image: circleci/node:latest
+      enabled: true
+      image: circleci/node:latest
 
     # docker:
     #   - image: circleci/node:latest
