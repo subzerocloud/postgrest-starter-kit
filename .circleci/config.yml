@@ -38,7 +38,7 @@ jobs:
       - run: docker pull docteurklein/sqitch:pgsql
 
       # bring up the application
-      - run: docker-compose up -d
+      - run: docker-compose up -d && sleep 10
 
       # run tests
       - run: npm test
