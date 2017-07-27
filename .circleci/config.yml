@@ -30,9 +30,9 @@ jobs:
       - run: echo "hello world"
 
       - run:
-        name: Stack Up
-        working_directory: ~/repo
-        command: |
+          name: Stack Up
+          working_directory: ~/repo
+          command: |
             docker-compose up -d
             sleep 5
 
