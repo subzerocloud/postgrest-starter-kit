@@ -3,8 +3,7 @@ create schema api;
 set search_path = api, public;
 
 -- this role will be used as the owner of the views in the api schema
--- it is used in the definition of the RLS policies for tables accessed
--- by the views
+-- it is needed for the definition of the RLS policies
 drop role if exists api;
 create role api;
 
