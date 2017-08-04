@@ -54,7 +54,7 @@ http://docs.aws.amazon.com/acm/latest/userguide/acm-overview.html
 aws acm list-certificates
 
 # Save the ARN
-export CERT_ARN="arn:aws:acm:us-east-1:CHANGE-WITH-YOURS:certificate/CHANGE-WITH-YOURS"
+export CERTIFICATE-ARN="arn:aws:acm:us-east-1:CHANGE-WITH-YOURS:certificate/CHANGE-WITH-YOURS"
 ```
 
 Result should look like this
@@ -82,7 +82,7 @@ aws cloudformation create-stack \
     --capabilities CAPABILITY_IAM \
     --parameters \
     ParameterKey=ClusterName,ParameterValue=$CLUSTER_NAME \
-    ParameterKey=CertificateArn,ParameterValue=CERTIFICATE-ARN \
+    ParameterKey=CertificateArn,ParameterValue=$CERTIFICATE-ARN \
     ParameterKey=Vpc,ParameterValue=$Cluster_Vpc \
     ParameterKey=EcsSecurityGroup,ParameterValue=$Cluster_EcsSecurityGroup \
     ParameterKey=PubSubnetAz1,ParameterValue=$Cluster_PubSubnetAz1 \
