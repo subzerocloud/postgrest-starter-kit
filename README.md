@@ -60,12 +60,20 @@ PostgREST enables a different way of building data driven API backends. It does 
 
 Make sure that you have [Docker](https://www.docker.com/community-edition) v17 or newer installed.
 
-Clone the repo and launch the app with [Docker Compose](https://docs.docker.com/compose/):
+Setup your git repo with a reference to the upstream
+```base
+mkdir example-api
+cd example-api
+git init
+git remote add upstream https://github.com/subzerocloud/postgrest-starter-kit.git
+git fetch upstream
+git merge upstream/master
+```
+
+Launch the app with [Docker Compose](https://docs.docker.com/compose/):
 
 ```bash
-git clone --single-branch https://github.com/subzerocloud/postgrest-starter-kit example-api
-cd example-api                  # Change current directory to the newly created one
-docker-compose up -d            # Launch Docker containers
+docker-compose up -d
 ```
 
 The API server must become available at [http://localhost:8080/rest](http://localhost:8080/rest).
@@ -100,18 +108,16 @@ npm test                        # Run all tests (db, rest)
 
 ## Keeping Up-to-Date
 
-If you keep the original Git history after  forking and cloning this repo, you can always fetch and merge
-the recent updates back into your project by running:
+You can always fetch and merge the recent updates back into your project by running:
 
 ```bash
-git remote add upstream https://github.com/subzerocloud/postgrest-starter-kit.git
 git fetch upstream
 git merge upstream/master
 ```
 
 ## Deployment
 
-We are currently working on a CloudFormation based stack setup [here](/pull/5)
+We are currently working on a CloudFormation based stack setup [here](/cloudformation)
 
 There are two stages when going to production.
 
