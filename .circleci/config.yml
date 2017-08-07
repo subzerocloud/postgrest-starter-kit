@@ -1,0 +1,99 @@
+version: 2
+jobs:
+  pull_docker_images:
+    machine:
+      enabled: true
+    steps:
+      - restore_cache:
+          keys:
+          - v2-docker-images
+      - run:
+          name: docker pull & save
+          command: |
+            if [ ! -f ~/.docker/images.tar ]; then
+              docker pull postgres
+              docker pull subzerocloud/postgrest
+              docker pull openresty/openresty:jessie
+              docker pull subzerocloud/pg-amqp-bridge
+              docker pull rabbitmq:3-management
+              docker pull lren/pgtap
+              docker pull docteurklein/sqitch:pgsql
+              mkdir -p ~/.docker
+              docker save --output ~/.docker/images.tar \
+                postgres \
+                subzerocloud/postgrest \
+                openresty/openresty:jessie \
+                subzerocloud/pg-amqp-bridge \
+                rabbitmq:3-management \
+                lren/pgtap \
+                docteurklein/sqitch:pgsql
+            fi
+      - save_cache:
+          paths:
+            - ~/.docker
+          key: v2-docker-images
+
+  install_npm_dependencies:
+    docker:
+      - image: circleci/node:latest
+    steps:
+      - checkout
+      - restore_cache:
+          keys:
+          - v2-npm-dependencies-{{ checksum "package.json" }}
+      - run: npm install
+      - save_cache:
+          paths:
+            - node_modules
+          key: v2-npm-dependencies-{{ checksum "package.json" }}
+  test:
+    machine:
+      enabled: true
+    steps:
+      - checkout
+      - restore_cache:
+          keys:
+          - v2-docker-images
+      - restore_cache:
+          keys:
+          - v2-npm-dependencies-{{ checksum "package.json" }}
+      - run: docker load --input ~/.docker/images.tar
+      - run: docker images
+      
+      # bring up the application
+      - run: docker-compose up -d && sleep 10
+
+      # run tests
+      - run: npm test
+  
+  deploy:
+    machine:
+      enabled: true
+    environment:
+      - sqitch: "docker run --rm docteurklein/sqitch:pgsql"
+    steps:
+      - checkout
+      - deploy:
+          name: Deploy if tests pass and is version tagged
+          command: |
+            if [ "${CIRCLE_BRANCH}" == "master" ]; then
+              $sqitch --help
+              docker build -t openresty ./openresty/
+              # docker tag openresty $OPENRESTY_REPO_URI:latest
+              # aws ecr get-login --no-include-email | sh
+              # docker push $REMOTE_REPO:latest
+            fi
+  
+workflows:
+  version: 2
+  build-and-deploy:
+    jobs:
+      - pull_docker_images
+      - install_npm_dependencies
+      - test:
+          requires:
+            - pull_docker_images
+            - install_npm_dependencies
+      - deploy:
+          requires:
+            - test

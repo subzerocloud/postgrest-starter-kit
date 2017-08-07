@@ -7,6 +7,18 @@ Parameters:
   CertificateArn:
     Type: String
     Description: "Provide full IAM/ACM certificate ARN to also serve HTTPS"
+  Vpc:
+    Type: String
+    Description: "Vpc of the ECS cluster"
+  EcsSecurityGroup: 
+    Type: String
+    Description: "Security Group of the ECS cluster"
+  PubSubnetAz1: 
+    Type: String
+    Description: "Subnet 1 of the ECS cluster"
+  PubSubnetAz2:
+    Type: String
+    Description: "Subnet 2 of the ECS cluster"
 Outputs:
   ExternalElbHost:
     Description: "Internet-facing load balancer host name"
@@ -29,105 +41,20 @@ Outputs:
     Value: !Ref ServiceRole
     Export:
       Name: !Sub "${ClusterName}-ServiceRole"
-  VpcId:
+  Vpc:
     Description: "VPC ID from ECS Cluster Wizard"
-    Value: !GetAtt ClusterStackResources.Vpc
+    Value: !Ref Vpc
     Export:
       Name: !Sub "${ClusterName}-Vpc"
 Conditions:
   HasSslCertificate: !Not [ !Equals [ !Ref CertificateArn, "" ] ]
 Resources:
-  # Custom resource lambda function for retrieving resource data about the
-  # stack created by the ECS cluster wizard
-  CustomResourceLambdaRole:
-    Type: AWS::IAM::Role
-    Properties:
-      AssumeRolePolicyDocument:
-        Version: "2012-10-17"
-        Statement:
-          - Effect: "Allow"
-            Principal:
-              Service:
-                - "lambda.amazonaws.com"
-            Action:
-              - "sts:AssumeRole"
-      Path: "/"
-      Policies:
-        - PolicyName: "LambdaRole"
-          PolicyDocument:
-            Version: "2012-10-17"
-            Statement:
-              - Effect: "Allow"
-                Action:
-                  - "logs:CreateLogGroup"
-                  - "logs:CreateLogStream"
-                  - "logs:PutLogEvents"
-                  - "cloudformation:DescribeStackResources"
-                Resource: "*"
-  StackResourcesLambda:
-    Type: AWS::Lambda::Function
-    Properties:
-      Handler: index.stackResources
-      Role: !GetAtt CustomResourceLambdaRole.Arn
-      Timeout: 30
-      Runtime: nodejs6.10
-      Code:
-        ZipFile: !Sub |
-          const aws = require('aws-sdk');
-          const cloudformation = new aws.CloudFormation();
-          const response = require('cfn-response');
-
-          function customResourceTemplate(handler) {
-            return function(event, context) {
-              console.log("REQUEST RECEIVED:\n" + JSON.stringify(event));
-
-              const resolve = response.send.bind(this, event, context, response.SUCCESS);
-              const reject = response.send.bind(this, event, context, response.FAILED);
-              if(event.RequestType === 'Delete') {
-                // Nothing to do to delete the resource
-                resolve()
-                return;
-              }
-
-              try {
-                handler(event).then(resolve).catch(reason => {
-                  console.log('HANDLER ERROR:\n' + reason);
-                  reject(reason);
-                });
-              } catch(reason) {
-                console.log('HANDLER ERROR:\n' + reason);
-                reject(reason);
-              }
-            }
-          }
-          
-          // Return a mapping of Logical Id to Physical Id for all resources of a specific stack
-          exports.stackResources = customResourceTemplate(event => {
-            const StackName = event.ResourceProperties.StackName;
-            if(typeof StackName !== 'string')
-              throw new Error('StackName property required');
-            return cloudformation.describeStackResources({ StackName }).promise()
-              .then(result => result.StackResources.reduce((prev, cur) => {
-                prev[cur.LogicalResourceId] = cur.PhysicalResourceId;
-                return prev;
-              }, {}));
-          });
-  # Invoke the custom resource
-  ClusterStackResources:
-    Type: Custom::StackResources
-    Properties:
-      ServiceToken: !GetAtt StackResourcesLambda.Arn
-      StackName: !Join
-        - ""
-        -
-          - "EC2ContainerService-"
-          - !Ref ClusterName
   # Create the load balancer
   LoadBalancerSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
       GroupDescription: "Allow ELB access from internet"
-      VpcId: !GetAtt ClusterStackResources.Vpc
+      VpcId: !Ref Vpc
       SecurityGroupIngress:
         - IpProtocol: "tcp"
           FromPort: "80"
@@ -140,7 +67,7 @@ Resources:
   LoadBalancerSecurityGroupIngress:
     Type: AWS::EC2::SecurityGroupIngress
     Properties:
-      GroupId: !GetAtt ClusterStackResources.EcsSecurityGroup
+      GroupId: !Ref EcsSecurityGroup
       IpProtocol: "tcp"
       FromPort: "32768"
       ToPort: "65535"
@@ -150,8 +77,8 @@ Resources:
     Properties:
       Scheme: "internet-facing"
       Subnets:
-        - !GetAtt ClusterStackResources.PubSubnetAz1
-        - !GetAtt ClusterStackResources.PubSubnetAz2
+        - !Ref PubSubnetAz1
+        - !Ref PubSubnetAz2
       LoadBalancerAttributes:
         - Key: idle_timeout.timeout_seconds
           Value: "50"
@@ -173,7 +100,7 @@ Resources:
         - Key: deregistration_delay.timeout_seconds
           Value: '30'
       UnhealthyThresholdCount: 3
-      VpcId: !GetAtt ClusterStackResources.Vpc
+      VpcId: !Ref Vpc
   ExternalListenerHttp:
     Type: AWS::ElasticLoadBalancingV2::Listener
     Properties:
