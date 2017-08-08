@@ -60,6 +60,9 @@ Parameters:
     Type: String
     Default: "secret"
     Description: "Plaintext"
+  Version:
+    Type: String
+
 Metadata:
   AWS::CloudFormation::Interface:
     ParameterLabels:
@@ -97,6 +100,8 @@ Metadata:
         default: "Pre Request"
       JwtSecret:
         default: "JWT Secret"
+      Version:
+        default: "Application version"
     ParameterGroups:
       - Label:
           default: "General"
@@ -106,6 +111,7 @@ Metadata:
           - JwtSecret
           - DesiredCount
           - HasHttpsListener
+          - Version
       - Label:
           default: "Container Images"
         Parameters:
@@ -143,6 +149,9 @@ Resources:
           Cpu: "10"
           Memory: "100"
           Environment:
+            # version used only to trigger image update and oncatiner restart
+            - Name: VERSION
+              Value: !Ref Version
             - Name: DB_URI
               Value: !Join
                 - ""
@@ -175,7 +184,12 @@ Resources:
               awslogs-group: !Ref PgRestLogGroup
               awslogs-region: !Ref AWS::Region
         - Name: "openresty"
-          Image: !Ref OpenRestyImage
+          Image: !Join
+            - ""
+            -
+              - !Ref OpenRestyImage
+              - ":"
+              - !Ref Version
           Cpu: "10"
           Memory: "100"
           PortMappings:
