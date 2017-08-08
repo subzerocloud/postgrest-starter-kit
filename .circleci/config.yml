@@ -117,7 +117,7 @@ jobs:
           name: trigger ECS service update
           command: |
             aws cloudformation update-stack \
-              --stack-name $PROJECT_NAME \
+              --stack-name $COMPOSE_PROJECT_NAME \
               --capabilities CAPABILITY_IAM \
               --use-previous-template \
               --parameters \

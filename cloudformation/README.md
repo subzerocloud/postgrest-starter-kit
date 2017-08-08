@@ -99,10 +99,10 @@ You can use any docker image repository you like.
 source .env
 
 # create the repository
-aws ecr create-repository --repository-name $PROJECT_NAME/openresty
+aws ecr create-repository --repository-name $COMPOSE_PROJECT_NAME/openresty
 
 # extract the uri in a separate env var
-export OPENRESTY_REPO_URI=`aws ecr describe-repositories --repository-name $PROJECT_NAME/openresty --output text --query 'repositories[0].repositoryUri'`
+export OPENRESTY_REPO_URI=`aws ecr describe-repositories --repository-name $COMPOSE_PROJECT_NAME/openresty --output text --query 'repositories[0].repositoryUri'`
 ```
 
 
@@ -114,27 +114,27 @@ source .env
 
 # set the subnet to the same VPS as the cluster
 aws rds create-db-subnet-group \
-    --db-subnet-group-name $PROJECT_NAME-db-subnet \
-    --db-subnet-group-description $PROJECT_NAME-db-subnet \
+    --db-subnet-group-name $COMPOSE_PROJECT_NAME-db-subnet \
+    --db-subnet-group-description $COMPOSE_PROJECT_NAME-db-subnet \
     --subnet-ids $Cluster_PubSubnetAz1 $Cluster_PubSubnetAz2
 
 
 # create the database
 aws rds create-db-instance \
-    --db-instance-identifier $PROJECT_NAME-db \
+    --db-instance-identifier $COMPOSE_PROJECT_NAME-db \
     --db-name $DB_NAME \
     --allocated-storage 20 \
     --db-instance-class db.t2.micro \
     --engine postgres \
     --publicly-accessible \
     --multi-az \
-    --db-subnet-group-name $PROJECT_NAME-db-subnet \
+    --db-subnet-group-name $COMPOSE_PROJECT_NAME-db-subnet \
     --master-username $SUPER_USER \
     --master-user-password SET-YOUR-ROOT-PASSWORD-HERE
     
 
 # export production db host
-export PRODUCTION_DB_HOST=`aws rds describe-db-instances --db-instance-identifier $PROJECT_NAME-db --output text --query 'DBInstances[0].Endpoint.Address'`
+export PRODUCTION_DB_HOST=`aws rds describe-db-instances --db-instance-identifier $COMPOSE_PROJECT_NAME-db --output text --query 'DBInstances[0].Endpoint.Address'`
 
 # check you can connect
 psql -h $PRODUCTION_DB_HOST -U $SUPER_USER $DB_NAME
@@ -154,7 +154,7 @@ not deployed yet (db is empty and the OpenResty images are not uploaded, this wi
 
 ```sh
 aws cloudformation create-stack \
---stack-name $PROJECT_NAME \
+--stack-name $COMPOSE_PROJECT_NAME \
 --template-body file://cloudformation/application.yml \
 --capabilities CAPABILITY_IAM \
 --parameters \
