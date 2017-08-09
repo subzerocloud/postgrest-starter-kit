@@ -7,10 +7,10 @@
 
 # Production database connection info
 # SUPER_USER - your database admin user
-# SUPER_USER_PASSWORD - password for the database admin user
-# PRODUCTION_DB_HOST - host uri
-# example - myapplication-db.zzzzzzzzz.us-east-1.rds.amazonaws.com:5432
+# PRODUCTION_SUPER_USER_PASSWORD - password for the database admin user
+# PRODUCTION_DB_HOST - host uri (ex: myapplication-db.zzzzzzzzz.us-east-1.rds.amazonaws.com:5432)
 # DB_NAME - database name
+# AWS_REGION - region where you ECS cluster is located (ex: us-east-1)
 
 version: 2
 jobs:
@@ -84,18 +84,30 @@ jobs:
   deploy:
     machine:
       enabled: true
+      environment:
+        PATH: "$PATH:/home/$USER/perl5/bin"
+        PERL_CPANM_OPT: "--local-lib=/home/$USER/perl5"
+        PERL5LIB: "/home/$USER/perl5/lib/perl5:$PERL5LIB"
     steps:
       - checkout
+      - restore_cache:
+          keys:
+          - v2-deploy-dependencies
       - run:
           name: install dependencies
           command: |
-            apt-get install sqitch
+            curl -L https://cpanmin.us | perl - App::cpanminus
+            cpanm App::Sqitch DBD::Pg
+      - save_cache:
+          paths:
+            - /home/$USER/perl5
+          key: v2-deploy-dependencies
       - deploy:
           name: build and push openresty image
           command: |
             docker build -t openresty ./openresty/
             docker tag openresty $OPENRESTY_REPO_URI:$CIRCLE_TAG
-            aws ecr get-login --no-include-email | sh
+            aws ecr get-login --region $AWS_REGION | sh
             docker push $OPENRESTY_REPO_URI:$CIRCLE_TAG
       - deploy:
           name: deploy the latest database migrations
@@ -104,9 +116,9 @@ jobs:
             # sqitch config --user engine.pg.client /opt/local/pgsql/bin/psql
             sqitch config --user user.name 'CircleCI'
             sqitch config --user user.email 'bot@circleci.com'
-            sqitch target add production db:pg://$SUPER_USER:$SUPER_USER_PASSWORD@$PRODUCTION_DB_HOST/$DB_NAME
+            sqitch target add production db:pg://$SUPER_USER:$PRODUCTION_SUPER_USER_PASSWORD@$PRODUCTION_DB_HOST/$DB_NAME
             sqitch engine add pg production
-            sqitch --verify deploy
+            sqitch deploy
       - deploy:
           name: tag openrety image as latest
           command: |
@@ -117,13 +129,14 @@ jobs:
           name: trigger ECS service update
           command: |
             aws cloudformation update-stack \
+              --region $AWS_REGION \
               --stack-name $COMPOSE_PROJECT_NAME \
               --capabilities CAPABILITY_IAM \
               --use-previous-template \
               --parameters \
                 ParameterKey=ClusterName,UsePreviousValue=true \
                 ParameterKey=DesiredCount,ParameterValue=1 \
-                ParameterKey=version,ParameterValue=$CIRCLE_TAG \
+                ParameterKey=Version,ParameterValue=$CIRCLE_TAG \
                 ParameterKey=OpenRestyImage,UsePreviousValue=true \
                 ParameterKey=ListenerHostNamePattern,UsePreviousValue=true \
                 ParameterKey=HasHttpsListener,UsePreviousValue=true \
@@ -148,9 +161,18 @@ workflows:
   version: 2
   build-and-deploy:
     jobs:
-      - pull_docker_images
-      - install_npm_dependencies
+      - pull_docker_images:
+          filters:
+            tags:
+              only: /v[0-9]+(\.[0-9]+)*/
+      - install_npm_dependencies:
+          filters:
+            tags:
+              only: /v[0-9]+(\.[0-9]+)*/
       - test:
+          filters:
+            tags:
+              only: /v[0-9]+(\.[0-9]+)*/
           requires:
             - pull_docker_images
             - install_npm_dependencies
