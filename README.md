@@ -85,10 +85,11 @@ curl http://localhost:8080/rest/todos?select=id,todo
 
 ## Development workflow and debugging
 
-Download and install [subZero devtools](https://github.com/subzerocloud/devtools) for your OS.<br />
-Execute `sz` (of the name you used to symlink the binary) in the root of your project.<br />
-After this step you can view the logs of all the stack components (SQL queries will also be logged).
-If you edit a sql/conf/lua file in your project, the changes will immediately be applied.
+Install [subZero devtools](https://github.com/subzerocloud/devtools) using `npm install -g subzero-cli`.
+
+Execute `subzero dashboard` in the root of your project.<br />
+After this step you can view the logs of all the stack components (SQL queries will also be logged) and
+if you edit a sql/conf/lua file in your project, the changes will immediately be applied.
 
 
 ## Testing
