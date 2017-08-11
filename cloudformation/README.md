@@ -128,9 +128,10 @@ aws rds create-db-instance \
     --engine postgres \
     --publicly-accessible \
     --multi-az \
+    --db-subnet-group-name $COMPOSE_PROJECT_NAME-db-subnet \
     --master-username $SUPER_USER \
-    --master-user-password SET-YOUR-ROOT-PASSWORD-HERE \
-    --db-subnet-group-name $COMPOSE_PROJECT_NAME-db-subnet
+    --master-user-password SET-YOUR-ROOT-PASSWORD-HERE
+    
 
 # export production db host
 export PRODUCTION_DB_HOST=`aws rds describe-db-instances --db-instance-identifier $COMPOSE_PROJECT_NAME-db --output text --query 'DBInstances[0].Endpoint.Address'`
@@ -140,9 +141,9 @@ psql -h $PRODUCTION_DB_HOST -U $SUPER_USER $DB_NAME
 
 # create the authenticator role used by PostgREST to connect
 psql \
-    -c "create role $DB_USER with login password 'SET-YOUR-AUTHENTICATOR-PASSWORD';"
-    -h $PRODUCTION_DB_HOST -U $SUPER_USER $DB_NAME
-
+    -h $PRODUCTION_DB_HOST \
+    -U $SUPER_USER \
+    -c "create role $DB_USER with login password 'SET-YOUR-AUTHENTICATOR-PASSWORD';" $DB_NAME
 ```
 
 
@@ -159,6 +160,7 @@ aws cloudformation create-stack \
 --parameters \
 ParameterKey=ClusterName,ParameterValue=$CLUSTER_NAME \
 ParameterKey=DesiredCount,ParameterValue=0 \
+ParameterKey=Version,ParameterValue=v0.0.0 \
 ParameterKey=OpenRestyImage,ParameterValue=$OPENRESTY_REPO_URI \
 ParameterKey=ListenerHostNamePattern,ParameterValue=mydomain.com \
 ParameterKey=HasHttpsListener,ParameterValue=Yes \
