@@ -4,13 +4,15 @@
 
 # OPENRESTY_REPO_URI - repo uri, do not include version tag
 # example: 0000000000.dkr.ecr.us-east-1.amazonaws.com/myapplication/openresty
+# COMPOSE_PROJECT_NAME - the name of your project, used to determine the name of your stack
 
 # Production database connection info
+# AWS_REGION - region where you ECS cluster is located (ex: us-east-1)
 # SUPER_USER - your database admin user
 # PRODUCTION_SUPER_USER_PASSWORD - password for the database admin user
 # PRODUCTION_DB_HOST - host uri (ex: myapplication-db.zzzzzzzzz.us-east-1.rds.amazonaws.com:5432)
 # DB_NAME - database name
-# AWS_REGION - region where you ECS cluster is located (ex: us-east-1)
+# PRODUCTION_DB_SECURITY_GROUP - AWS security group id that the db is in
 
 version: 2
 jobs:
@@ -84,15 +86,20 @@ jobs:
   deploy:
     machine:
       enabled: true
-      environment:
-        PATH: "$PATH:/home/$USER/perl5/bin"
-        PERL_CPANM_OPT: "--local-lib=/home/$USER/perl5"
-        PERL5LIB: "/home/$USER/perl5/lib/perl5:$PERL5LIB"
+      # environment:
+      #   - PATH: "$PATH:/home/$USER/perl5/bin"
+      #   - PERL_CPANM_OPT: "--local-lib=/home/$USER/perl5"
+      #   - PERL5LIB: "/home/$USER/perl5/lib/perl5:$PERL5LIB"
     steps:
       - checkout
       - restore_cache:
           keys:
-          - v2-deploy-dependencies
+          - v3-deploy-dependencies
+      # hack to set env var that need interpolation
+      # (https://circleci.com/docs/2.0/env-vars/#interpolating-enviroment-variables-to-set-other-environment-variables)
+      - run: echo 'export PATH=$PATH:/home/$USER/perl5/bin' >> $BASH_ENV
+      - run: echo 'export PERL_CPANM_OPT="--local-lib=/home/$USER/perl5"' >> $BASH_ENV
+      - run: echo 'export PERL5LIB=/home/$USER/perl5/lib/perl5:$PERL5LIB' >> $BASH_ENV
       - run:
           name: install dependencies
           command: |
@@ -100,8 +107,8 @@ jobs:
             cpanm App::Sqitch DBD::Pg
       - save_cache:
           paths:
-            - /home/$USER/perl5
-          key: v2-deploy-dependencies
+            - ~/perl5
+          key: v3-deploy-dependencies
       - deploy:
           name: build and push openresty image
           command: |
@@ -118,9 +125,26 @@ jobs:
             sqitch config --user user.email 'bot@circleci.com'
             sqitch target add production db:pg://$SUPER_USER:$PRODUCTION_SUPER_USER_PASSWORD@$PRODUCTION_DB_HOST/$DB_NAME
             sqitch engine add pg production
+
+            # temporatily whitelist CircleCI ip
+            public_ip_address=$(wget -qO- http://checkip.amazonaws.com)
+            echo "this computers public ip address is $public_ip_address"
+            aws ec2 authorize-security-group-ingress \
+              --region $AWS_REGION \
+              --group-id $PRODUCTION_DB_SECURITY_GROUP \
+              --protocol tcp \
+              --port 5432 \
+              --cidr ${public_ip_address}/32
+            sleep 5
             sqitch deploy
+            aws ec2 revoke-security-group-ingress \
+              --region $AWS_REGION \
+              --group-id $PRODUCTION_DB_SECURITY_GROUP \
+              --protocol tcp \
+              --port 5432 \
+              --cidr ${public_ip_address}/32
       - deploy:
-          name: tag openrety image as latest
+          name: tag openresty image as latest
           command: |
             # this will be fast since all the layers are already in the repository
             docker tag openresty $OPENRESTY_REPO_URI:latest
