@@ -8,8 +8,9 @@ services:
   # commented and in the .env file you will specify the ip of your separate database instance
   db:
     image: postgres
+    hostname: ${DB_HOST}
     ports:
-      - "5432:5432"
+      - "${DB_PORT}:5432"
     environment:
       # env vars specific to postgres image used on first boot
       - POSTGRES_USER=${SUPER_USER}
@@ -32,12 +33,13 @@ services:
   # and providing a REST api, (almost) every request that is sent to the database goes through it
   postgrest:
     image: subzerocloud/postgrest
+    hostname: ${POSTGREST_HOST}
     ports:
-      - "3000:3000"
+      - "${POSTGREST_PORT}:3000"
     links:
       - db:db
     environment:
-      - DB_URI=postgres://${DB_USER}:${DB_PASS}@${DB_HOST}:${DB_PORT}/${DB_NAME}
+      - DB_URI=postgres://${DB_USER}:${DB_PASS}@${DB_HOST}:5432/${DB_NAME}
       - DB_SCHEMA=${DB_SCHEMA}
       - DB_ANON_ROLE=${DB_ANON_ROLE}
       - DB_POOL=${DB_POOL}
