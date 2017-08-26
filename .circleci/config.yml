@@ -103,6 +103,7 @@ jobs:
       - run:
           name: install dependencies
           command: |
+            sudo apt-get install liblist-moreutils-perl
             curl -L https://cpanmin.us | perl - App::cpanminus
             cpanm App::Sqitch DBD::Pg
       - save_cache:
