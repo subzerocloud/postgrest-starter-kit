@@ -31,19 +31,19 @@ services:
   # PostgREST instance, is responsible for communicating with the database
   # and providing a REST api, (almost) every request that is sent to the database goes through it
   postgrest:
-    image: subzerocloud/postgrest
+    image: postgrest/postgrest
     ports:
       - "3000:3000"
     links:
       - db:db
     environment:
-      - DB_URI=postgres://${DB_USER}:${DB_PASS}@${DB_HOST}:${DB_PORT}/${DB_NAME}
-      - DB_SCHEMA=${DB_SCHEMA}
-      - DB_ANON_ROLE=${DB_ANON_ROLE}
-      - DB_POOL=${DB_POOL}
-      - JWT_SECRET=${JWT_SECRET}
-      - MAX_ROWS=${MAX_ROWS}
-      - PRE_REQUEST=${PRE_REQUEST}
+      - PGRST_DB_URI=postgres://${DB_USER}:${DB_PASS}@${DB_HOST}:${DB_PORT}/${DB_NAME}
+      - PGRST_DB_SCHEMA=${DB_SCHEMA} 
+      - PGRST_DB_ANON_ROLE=${DB_ANON_ROLE}
+      - PGRST_DB_POOL=${DB_POOL} 
+      - PGRST_JWT_SECRET=${JWT_SECRET}  
+      - PGRST_MAX_ROWS=${MAX_ROWS} 
+      - PGRST_PRE_REQUEST=${PRE_REQUEST}
 
   # OpenResty (Nginx + Lua) instance that sits in front of PostgREST.
   # All the requests comming into the system are first hitting this component.
