@@ -44,6 +44,7 @@ services:
       - PGRST_JWT_SECRET=${JWT_SECRET}  
       - PGRST_MAX_ROWS=${MAX_ROWS} 
       - PGRST_PRE_REQUEST=${PRE_REQUEST}
+      - PGRST_SERVER_PROXY_URI=${SERVER_PROXY_URI}
 
   # OpenResty (Nginx + Lua) instance that sits in front of PostgREST.
   # All the requests comming into the system are first hitting this component.
