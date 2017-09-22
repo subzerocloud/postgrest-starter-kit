@@ -48,7 +48,7 @@ services:
 
   # OpenResty (Nginx + Lua) instance that sits in front of PostgREST.
   # All the requests comming into the system are first hitting this component.
-  # After after some processing/checks and transformation, the request is forwarded
+  # After some processing/checks and transformation, the request is forwarded
   # to PostgREST down the stack.
   openresty:
     image: openresty/openresty:jessie
