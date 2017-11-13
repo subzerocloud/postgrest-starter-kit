@@ -5,7 +5,7 @@ set client_min_messages to warning;
 
 -- load some variables from the env
 \setenv base_dir :DIR
-\set base_dir `if [ $base_dir != ":DIR" ]; then echo $base_dir; else echo "/docker-entrypoint-initdb.d"; fi`
+\set base_dir `if [ $base_dir != ":"DIR ]; then echo $base_dir; else echo "/docker-entrypoint-initdb.d"; fi`
 \set anonymous `echo $DB_ANON_ROLE`
 \set authenticator `echo $DB_USER`
 \set authenticator_pass `echo $DB_PASS`
