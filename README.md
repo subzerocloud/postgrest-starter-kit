@@ -2,7 +2,8 @@
 
 Boilerplate and tooling for authoring REST API backends with [PostgREST](https://postgrest.com).
 
-![PostgREST Starter Kit](/media/postgrest-starter-kit.gif?raw=true "PostgREST Starter Kit")
+![PostgREST Starter Kit](https://raw.githubusercontent.com/wiki/subzerocloud/postgrest-starter-kit/images/postgrest-starter-kit.gif "PostgREST Starter Kit")
+
 
 ## Purpose
 
@@ -20,9 +21,9 @@ PostgREST enables a different way of building data driven API backends. It does 
 ✓ Full migration management (migration files are automatically created) through [subzero-cli](https://github.com/subzerocloud/subzero-cli)/[sqitch](http://sqitch.org/)/[apgdiff](https://github.com/subzerocloud/apgdiff)<br>
 ✓ SQL unit test using [pgTAP](http://pgtap.org/)<br>
 ✓ Integration tests with [SuperTest / Mocha](https://github.com/visionmedia/supertest)<br>
-✓ (soon) Docker files for building production images<br>
+✓ Docker files for building production images<br>
 ✓ Community support on [Slack](https://slack.subzero.cloud/)<br>
-✓ Compatible with [subZero](https://subzero.cloud/) if you decide you need a GraphQL API with no additional work<br>
+✓ Compatible with [subZero Starter Kit](https://github.com/subzerocloud/subzero-starter-kit) if you decide you need a GraphQL API with no additional work<br>
 
 
 ## Directory Layout
@@ -63,12 +64,9 @@ Make sure that you have [Docker](https://www.docker.com/community-edition) v17 o
 
 Setup your git repo with a reference to the upstream
 ```base
-mkdir example-api
-cd example-api
-git init
-git remote add upstream https://github.com/subzerocloud/postgrest-starter-kit.git
-git fetch upstream
-git merge upstream/master
+mkdir example-api && cd example-api
+git clone https://github.com/subzerocloud/postgrest-starter-kit.git .
+git remote rename origin upstream
 ```
 
 Launch the app with [Docker Compose](https://docs.docker.com/compose/):
@@ -103,9 +101,9 @@ Here is how you run them
 
 ```bash
 npm install                     # Install test dependencies
+npm test                        # Run all tests (db, rest)
 npm run test_db                 # Run pgTAP tests
 npm run test_rest               # Run integration tests
-npm test                        # Run all tests (db, rest)
 ```
 
 ## Keeping Up-to-Date
@@ -119,7 +117,7 @@ git merge upstream/master
 
 ## Deployment
 
-More information in [Production Infrastructure (AWS ECS+RDS)](https://github.com/subzerocloud/postgrest-starter-kit/wiki/Production-Infrastructure)
+More information in [Production Infrastructure (AWS ECS+RDS)](https://github.com/subzerocloud/postgrest-starter-kit/wiki/Production-Infrastructure) and [Pushing to Production](https://github.com/subzerocloud/postgrest-starter-kit/wiki/Pushing-to-Production)
 
 ## Contributing
 
