@@ -66,7 +66,7 @@ Setup your git repo with a reference to the upstream
 ```base
 mkdir example-api && cd example-api
 git clone https://github.com/subzerocloud/postgrest-starter-kit.git .
-git remote rename origin upstream
+git remote rename origin upstream && git branch --unset-upstream
 ```
 
 Launch the app with [Docker Compose](https://docs.docker.com/compose/):
@@ -84,7 +84,10 @@ curl http://localhost:8080/rest/todos?select=id,todo
 
 ## Development workflow and debugging
 
-Install [subzero-cli](https://github.com/subzerocloud/subzero-cli) using `npm install -g subzero-cli`.
+Install [subzero-cli](https://github.com/subzerocloud/subzero-cli) using with
+```
+npm install -g subzero-cli
+```
 
 Execute `subzero dashboard` in the root of your project.<br />
 After this step you can view the logs of all the stack components (SQL queries will also be logged) and
