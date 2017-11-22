@@ -1,11 +1,22 @@
-#!/bin/sh
+#!/bin/bash
+
+CUSTOM_CONFIG=$(cat <<EOF
+#------------------------------------------------------------------------------
+# CUSTOM SETTINGS (they override the values set above in the config)
+#------------------------------------------------------------------------------
+
+# log all queries
+log_statement = 'all'
+
+# a few settings to speed up schema reloading at the expense of durability
+fsync = off
+synchronous_commit = off
+full_page_writes = off
+EOF
+)
+
 set -e
 
 if [ "$DEVELOPMENT" = '1' ]; then
-	echo "Enabling query logging"
-	perl -pi -e "s/#log_statement = 'none'/log_statement = 'all'/g" /var/lib/postgresql/data/postgresql.conf
-	echo "Switching to nonpersistent mode to gain some speed when resetting the database"
-	perl -pi -e "s/#fsync = on/fsync = off/g" /var/lib/postgresql/data/postgresql.conf
-	perl -pi -e "s/#synchronous_commit = on/synchronous_commit = off/g" /var/lib/postgresql/data/postgresql.conf
-	perl -pi -e "s/#full_page_writes = on/full_page_writes = off/g" /var/lib/postgresql/data/postgresql.conf
+	echo "${CUSTOM_CONFIG}" >> /var/lib/postgresql/data/postgresql.conf
 fi
