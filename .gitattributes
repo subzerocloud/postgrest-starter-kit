@@ -1,0 +1,4 @@
+# Set the default behavior, in case people don't have core.autocrlf set.
+* text=auto
+# convert all bash scripts to run with linux line endings by default.
+*.sh text eol=lf
