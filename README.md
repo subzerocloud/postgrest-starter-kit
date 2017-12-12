@@ -48,10 +48,7 @@ PostgREST enables a different way of building data driven API backends. It does 
 │   └── entrypoint.sh         # Custom entrypoint
 ├── tests                     # Tests for all the components
 │   ├── db                    # pgTap tests for the db
-│   ├── postgrest             # Simple bash based integration tests for PostgREST
-│   └── openresty             # Mocha based integration tests for openresty
-│       ├── rest              # REST interface tests
-│       └── common.js         # Helper functions
+│   └── rest                  # REST interface tests
 ├── docker-compose.yml        # Defines Docker services, networks and volumes
 └── .env                      # Project configurations
 
