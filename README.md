@@ -31,27 +31,24 @@ PostgREST enables a different way of building data driven API backends. It does 
 ```bash
 .
 ├── db                        # Database schema source files and tests
-│   ├── src                   # Schema definition
-│   │   ├── api               # Api entities avaiable as REST endpoints
-│   │   ├── data              # Definition of source tables that hold the data
-│   │   ├── libs              # A collection modules of used throughout the code
-│   │   ├── authorization     # Application level roles and their privileges
-│   │   ├── sample_data       # A few sample rows
-│   │   └── init.sql          # Schema definition entry point
-│   └── tests                 # pgTap tests
+│   └── src                   # Schema definition
+│       ├── api               # Api entities avaiable as REST endpoints
+│       ├── data              # Definition of source tables that hold the data
+│       ├── libs              # A collection modules of used throughout the code
+│       ├── authorization     # Application level roles and their privileges
+│       ├── sample_data       # A few sample rows
+│       └── init.sql          # Schema definition entry point
 ├── openresty                 # Reverse proxy configurations and Lua code
 │   ├── lualib
 │   │   └── user_code         # Application Lua code
 │   ├── nginx                 # Nginx files
 │   │   ├── conf              # Configuration files
 │   │   └── html              # Static frontend files
-│   ├── tests                 # Mocha based integration tests
-│   │   ├── rest              # REST interface tests
-│   │   └── common.js         # Helper functions
 │   ├── Dockerfile            # Dockerfile definition for production
 │   └── entrypoint.sh         # Custom entrypoint
-├── postgrest                 # PostgREST 
-│   └── tests                 # Simple bash based integration tests
+├── tests                     # Tests for all the components
+│   ├── db                    # pgTap tests for the db
+│   └── rest                  # REST interface tests
 ├── docker-compose.yml        # Defines Docker services, networks and volumes
 └── .env                      # Project configurations
 

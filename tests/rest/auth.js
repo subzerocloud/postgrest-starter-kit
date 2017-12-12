@@ -1,4 +1,4 @@
-import {rest_service, jwt, resetdb} from '../common.js';
+import {rest_service, jwt, resetdb} from './common.js';
 const request = require('supertest');
 const should = require("should");
 
