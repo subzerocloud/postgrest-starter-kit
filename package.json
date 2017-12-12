@@ -10,8 +10,8 @@
     "supertest": "^3.0.0"
   },
   "scripts": {
-    "test_rest": "mocha --compilers js:babel-core/register ./openresty/tests/rest/",
-    "test_db": "( set -a && . ./.env && set +a && docker run -i -t --rm --name pgtap --net ${COMPOSE_PROJECT_NAME}_default --link ${COMPOSE_PROJECT_NAME}_db_1:db -v $(pwd)/db/tests/:/test -e DATABASE=$DB_NAME -e USER=$SUPER_USER -e PASSWORD=$SUPER_USER_PASSWORD lren/pgtap )",
+    "test_rest": "mocha --compilers js:babel-core/register ./tests/openresty/rest/",
+    "test_db": "( set -a && . ./.env && set +a && docker run -i -t --rm --name pgtap --net ${COMPOSE_PROJECT_NAME}_default --link ${COMPOSE_PROJECT_NAME}_db_1:db -v $(pwd)/tests/db/:/test -e DATABASE=$DB_NAME -e USER=$SUPER_USER -e PASSWORD=$SUPER_USER_PASSWORD lren/pgtap )",
     "test": "npm run test_db && npm run test_rest"
   },
   "author": "ruslan.talpa@subzero.cloud",
