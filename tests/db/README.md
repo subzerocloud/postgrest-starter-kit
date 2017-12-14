@@ -10,6 +10,7 @@ To run the tests in this directory do the following
 	--network ${COMPOSE_PROJECT_NAME}_default \
 	--link ${COMPOSE_PROJECT_NAME}_db_1:db \
 	-v $(pwd)/tests/db/:/test \
+  -e HOST=$DB_HOST \
 	-e DATABASE=$DB_NAME \
 	-e USER=$SUPER_USER \
 	-e PASSWORD=$SUPER_USER_PASSWORD \
