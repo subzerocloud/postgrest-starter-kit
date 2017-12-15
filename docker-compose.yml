@@ -1,6 +1,7 @@
 version: '2'
 services:
 
+  ### DB START
   # This is the database to which the all the other components in the stack will connect and interact with
   # (but mostly it's PostgREST that is going to be responsible for the bulk of the db traffic)
   # Having the database in a container is very convinient in development but in production you will
@@ -27,6 +28,7 @@ services:
 
     volumes:
       - "./db/src:/docker-entrypoint-initdb.d"
+  ### DB END
 
   # PostgREST instance, is responsible for communicating with the database
   # and providing a REST api, (almost) every request that is sent to the database goes through it
