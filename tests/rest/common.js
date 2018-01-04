@@ -24,13 +24,17 @@ var rest_service = function() {
 }
 
 const resetdb = () => {
+  let pg;
   if (have_psql){
     var env = Object.create( process.env );
     env.PGPASSWORD = SUPER_USER_PASSWORD
-    const pg = spawnSync('psql', ['-h', 'localhost', '-U', SUPER_USER, DB_NAME, '-f', process.env.PWD + '/db/src/sample_data/reset.sql'], { env: env })
+    pg = spawnSync('psql', ['-h', 'localhost', '-U', SUPER_USER, DB_NAME, '-f', process.env.PWD + '/db/src/sample_data/reset.sql'], { env: env })
   }
   else{
-    const pg = spawnSync('docker', ['exec', PG, 'psql', '-U', SUPER_USER, DB_NAME, '-f', 'docker-entrypoint-initdb.d/sample_data/reset.sql'])
+    pg = spawnSync('docker', ['exec', PG, 'psql', '-U', SUPER_USER, DB_NAME, '-f', 'docker-entrypoint-initdb.d/sample_data/reset.sql'])
+  }
+  if(pg.status !== 0){
+    throw new Error(`Could not reset database in rest tests. Error = ${pg.stderr.toString()}`);
   }
 }
 
