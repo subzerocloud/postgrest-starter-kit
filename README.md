@@ -1,6 +1,6 @@
 # PostgREST Starter Kit
 
-Boilerplate and tooling for authoring REST API backends with [PostgREST](https://postgrest.com).
+Base project and tooling for authoring REST API backends with [PostgREST](https://postgrest.com).
 
 ![PostgREST Starter Kit](https://raw.githubusercontent.com/wiki/subzerocloud/postgrest-starter-kit/images/postgrest-starter-kit.gif "PostgREST Starter Kit")
 
