@@ -86,6 +86,7 @@ services:
       - db
       - rabbitmq
     environment:
+      - RUST_LOG=info # output forwarded messages
       - POSTGRESQL_URI=postgres://${DB_USER}:${DB_PASS}@${DB_HOST}:${DB_PORT}/${DB_NAME}
       - AMQP_URI=amqp://${RABBITMQ_DEFAULT_USER}:${RABBITMQ_DEFAULT_PASS}@rabbitmq//
       - BRIDGE_CHANNELS=events:amq.topic
