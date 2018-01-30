@@ -8,7 +8,7 @@ services:
   # use a separate database instance, like Amazon RDS, i.e. in production this section will be
   # commented and in the .env file you will specify the ip of your separate database instance
   db:
-    image: postgres:9.6
+    image: postgres:10
     ports:
       - "5432:5432"
     environment:
