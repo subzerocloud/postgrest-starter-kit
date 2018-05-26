@@ -15,7 +15,7 @@ create extension if not exists pgcrypto;
 create or replace function encrypt_pass() returns trigger as $$
 begin
   if new.password is not null then
-  	new.password = crypt(new.password, gen_salt('bf'));
+  	new.password = crypt(new.password, public.gen_salt('bf'));
   end if;
   return new;
 end
