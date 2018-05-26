@@ -4,6 +4,7 @@ const should = require("should");
 
 describe('read', function() {
   before(function(done){ resetdb(); done(); });
+  after(function(done){ resetdb(); done(); });
   
   it('basic', function(done) {
     rest_service()

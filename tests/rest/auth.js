@@ -4,6 +4,7 @@ const should = require("should");
 
 describe('auth', function() {
   before(function(done){ resetdb(); done(); });
+  after(function(done){ resetdb(); done(); });
   
   it('login', function(done) {
     rest_service()
