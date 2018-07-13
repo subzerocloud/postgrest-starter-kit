@@ -4,7 +4,7 @@ services:
   ### DB START
   # This is the database to which the all the other components in the stack will connect and interact with
   # (but mostly it's PostgREST that is going to be responsible for the bulk of the db traffic)
-  # Having the database in a container is very convinient in development but in production you will
+  # Having the database in a container is very convenient in development but in production you will
   # use a separate database instance, like Amazon RDS, i.e. in production this section will be
   # commented and in the .env file you will specify the ip of your separate database instance
   db:
@@ -49,7 +49,7 @@ services:
       - PGRST_SERVER_PROXY_URI=${SERVER_PROXY_URI}
 
   # OpenResty (Nginx + Lua) instance that sits in front of PostgREST.
-  # All the requests comming into the system are first hitting this component.
+  # All the requests coming into the system are first hitting this component.
   # After some processing/checks and transformation, the request is forwarded
   # to PostgREST down the stack.
   openresty:
