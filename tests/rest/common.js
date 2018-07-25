@@ -40,7 +40,7 @@ const have_psql = (psql_version.stdout && psql_version.stdout.toString('utf8').t
 
 
 var rest_service = function() { 
-  return request('http://localhost:8080/rest');
+  return request(process.env.SERVER_PROXY_URI);
 }
 
 const resetdb = () => {
