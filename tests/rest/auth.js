@@ -1,6 +1,5 @@
-import {rest_service, jwt, resetdb} from './common.js';
-const request = require('supertest');
-const should = require("should");
+import { rest_service, resetdb } from './common'
+import { should } from 'should'
 
 describe('auth', function() {
   before(function(done){ resetdb(); done(); });
@@ -26,7 +25,7 @@ describe('auth', function() {
     rest_service()
       .post('/rpc/me')
       .set('Accept', 'application/vnd.pgrst.object+json')
-      .set('Authorization', 'Bearer ' + jwt)
+      .withRole('webuser')
       .send({})
       .expect('Content-Type', /json/)
       .expect(200, done)
@@ -40,7 +39,7 @@ describe('auth', function() {
     rest_service()
       .post('/rpc/refresh_token')
       .set('Accept', 'application/vnd.pgrst.object+json')
-      .set('Authorization', 'Bearer ' + jwt)
+      .withRole('webuser')
       .send({})
       .expect('Content-Type', /json/)
       .expect(200, done)

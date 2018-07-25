@@ -6,8 +6,6 @@ import {spawnSync} from 'child_process';
 
 config();//.env file vars added to process.env
 
-const jwt = jsonwebtoken.sign({ user_id: 1, role: 'webuser' }, process.env.JWT_SECRET)
-
 request.Test.prototype.withRole = function (role) {
   if (typeof role !== 'string') {
     throw new TypeError(`The role must be given as a string`)
@@ -59,7 +57,6 @@ const resetdb = () => {
 }
 
 module.exports = {
-  jwt: jwt,
   resetdb: resetdb,
   rest_service: rest_service
 }
