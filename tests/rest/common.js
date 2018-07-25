@@ -1,10 +1,13 @@
+import jsonwebtoken from 'jsonwebtoken';
+import request from 'supertest';
 import {config} from 'dotenv';
 import {spawnSync} from 'child_process';
 // var execSync = require('child_process').execSync;
-const jwt = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoxLCJyb2xlIjoid2VidXNlciJ9.uSsS2cukBlM6QXe4Y0H90fsdkJSGcle9b7p_kMV1Ymk'
-const request = require('supertest');
 
 config();//.env file vars added to process.env
+
+const jwt = jsonwebtoken.sign({ user_id: 1, role: 'webuser' }, process.env.JWT_SECRET)
+
 const COMPOSE_PROJECT_NAME = process.env.COMPOSE_PROJECT_NAME;
 const POSTGRES_USER = process.env.POSTGRES_USER;
 const POSTGRES_PASSWORD = process.env.POSTGRES_PASSWORD;

@@ -2,6 +2,7 @@
   "name": "starter-kit",
   "dependencies": {},
   "devDependencies": {
+    "jsonwebtoken": "^8.3.0",
     "babel-core": "^6.24.0",
     "babel-preset-latest": "^6.24.1",
     "dotenv": "4.0.0",
