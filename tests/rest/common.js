@@ -8,6 +8,23 @@ config();//.env file vars added to process.env
 
 const jwt = jsonwebtoken.sign({ user_id: 1, role: 'webuser' }, process.env.JWT_SECRET)
 
+request.Test.prototype.withRole = function (role) {
+  if (typeof role !== 'string') {
+    throw new TypeError(`The role must be given as a string`)
+  }
+
+  let payload = {
+    user_id: 1,
+    role,
+    // Pretend that the JWT was issued 30 seconds ago in the past
+    iat: Math.floor(Date.now() / 1000) - 30
+  }
+
+  let jwt = jsonwebtoken.sign(payload, process.env.JWT_SECRET)
+
+  return this.set('Authorization', `Bearer ${jwt}`)
+}
+
 const COMPOSE_PROJECT_NAME = process.env.COMPOSE_PROJECT_NAME;
 const POSTGRES_USER = process.env.POSTGRES_USER;
 const POSTGRES_PASSWORD = process.env.POSTGRES_PASSWORD;
