@@ -23,7 +23,7 @@ PostgREST enables a different way of building data driven API backends. It does 
 ✓ Integration tests with [SuperTest / Mocha](https://github.com/visionmedia/supertest)<br>
 ✓ Docker files for building production images<br>
 ✓ Community support on [Slack](https://slack.subzero.cloud/)<br>
-✓ Compatible with [subZero Starter Kit](https://github.com/subzerocloud/subzero-starter-kit) if you decide you need a GraphQL API with no additional work<br>
+✓ Compatible with [subZero Starter Kit](https://github.com/subzerocloud/subzero-starter-kit) if you need a GraphQL API and a few [more features](https://github.com/subzerocloud/subzero-starter-kit#features) with no additional work<br>
 
 
 ## Directory Layout
@@ -57,34 +57,51 @@ PostgREST enables a different way of building data driven API backends. It does 
 
 ## Installation
 
-Make sure that you have [Docker](https://www.docker.com/community-edition) v17 or newer installed.
+### Docker
+All components are packaged as docker images, as such, the first thing to do is to install [Docker](https://www.docker.com/community-edition) for you platform.
 
-Setup your git repo with a reference to the upstream
-```base
-mkdir example-api && cd example-api
-git clone https://github.com/subzerocloud/postgrest-starter-kit.git .
-git remote rename origin upstream && git branch --unset-upstream
+### subzero-cli
+To aid with the development process, we have build a set of command line tools to help you with various stages of your project.
+
+Install `subzero-cli` by running
+```sh
+docker pull subzerocloud/subzero-cli-tools
+npm install -g subzero-cli
+subzero --version
 ```
 
-Launch the app with [Docker Compose](https://docs.docker.com/compose/):
+### Create a New Project
+
+subzero-cli provides you with a base-project command that lets you create a new project structure:
+
+```bash
+subzero base-project
+
+? Enter the directory path where you want to create the project .
+? Choose the starter kit (Use arrow keys)
+  subzero-starter-kit (REST & GraphQL) 
+❯ postgrest-starter-kit (REST) 
+```
+
+After the files have been created, you can bring up your application (API).
+In the root folder of application, run the docker-compose command
 
 ```bash
 docker-compose up -d
 ```
 
-The API server must become available at [http://localhost:8080/rest](http://localhost:8080/rest).
+The API server will become available at the following endpoint:
+
+- REST [http://localhost:8080/rest/](http://localhost:8080/rest/)
+
 Try a simple request
 
 ```bash
 curl http://localhost:8080/rest/todos?select=id,todo
 ```
 
-## Development workflow and debugging
 
-Install [subzero-cli](https://github.com/subzerocloud/subzero-cli) using with
-```
-npm install -g subzero-cli
-```
+## Development workflow and debugging
 
 Execute `subzero dashboard` in the root of your project.<br />
 After this step you can view the logs of all the stack components (SQL queries will also be logged) and
@@ -106,25 +123,19 @@ npm run test_db                 # Run pgTAP tests
 npm run test_rest               # Run integration tests
 ```
 
-## Keeping Up-to-Date
-
-You can always fetch and merge the recent updates back into your project by running:
-
-```bash
-git fetch upstream
-git merge upstream/master
-```
 
 ## Deployment
-
-More information in [Production Infrastructure (AWS ECS+RDS)](https://github.com/subzerocloud/postgrest-starter-kit/wiki/Production-Infrastructure) and [Pushing to Production](https://github.com/subzerocloud/postgrest-starter-kit/wiki/Pushing-to-Production)
+* [subZero Cloud](http://docs.subzero.cloud/production-infrastructure/subzero-cloud/) ([invite](https://subzero.cloud) required)
+* [Amazon ECS+RDS](http://docs.subzero.cloud/production-infrastructure/aws-ecs-rds/)
+* [Amazon Fargate+RDS](http://docs.subzero.cloud/production-infrastructure/aws-fargate-rds/)
+* [Dedicated Linux Server](https://docs.subzero.cloud/production-infrastructure/ubuntu-server/)
 
 ## Contributing
 
 Anyone and everyone is welcome to contribute.
 
 ## Support and Documentation
-* [Wiki](https://github.com/subzerocloud/postgrest-starter-kit/wiki) — comprehensive documentation
+* [Documentation](https://docs.subzero.cloud/postgrest-starter-kit/)
 * [PostgREST API Referrance](https://postgrest.com/en/stable/api.html)
 * [PostgreSQL Manual](https://www.postgresql.org/docs/current/static/index.html)
 * [Slack](https://slack.subzero.cloud/) — Get help, share ideas and feedback
