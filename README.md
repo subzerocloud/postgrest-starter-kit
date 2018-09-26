@@ -59,9 +59,9 @@ PostgREST enables a different way of building data driven API backends. It does 
 ## Installation 
 
 ### Prerequisites
- ✓ [Docker](https://www.docker.com)
- ✓ [Node.js](https://nodejs.org/en/)
- ✓ [subZero CLI](https://github.com/subzerocloud/subzero-cli#install)
+* [Docker](https://www.docker.com)
+* [Node.js](https://nodejs.org/en/)
+* [subZero CLI](https://github.com/subzerocloud/subzero-cli#install)
 
 ### Create a New Project
 subzero-cli provides you with a `base-project` command that lets you create a new project structure:
