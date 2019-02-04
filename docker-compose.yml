@@ -47,6 +47,8 @@ services:
       - PGRST_MAX_ROWS=${MAX_ROWS} 
       - PGRST_PRE_REQUEST=${PRE_REQUEST}
       - PGRST_SERVER_PROXY_URI=${SERVER_PROXY_URI}
+    depends_on:
+      - db
 
   # OpenResty (Nginx + Lua) instance that sits in front of PostgREST.
   # All the requests coming into the system are first hitting this component.
@@ -77,6 +79,8 @@ services:
       - "./openresty/nginx/conf/includes:/usr/local/openresty/nginx/conf/includes"
       - "./openresty/nginx/html:/usr/local/openresty/nginx/html"
       - "./openresty/lualib/user_code:/usr/local/openresty/lualib/user_code"
+    depends_on:
+      - postgrest
 
   # pg-amqp-bridge instance is responsible for forwarding NOTIFY events in PostgreSQL
   # to RabbitMQ based on the BRIDGE_CHANNELS configuration
@@ -90,6 +94,8 @@ services:
       - POSTGRESQL_URI=postgres://${DB_USER}:${DB_PASS}@${DB_HOST}:${DB_PORT}/${DB_NAME}
       - AMQP_URI=amqp://${RABBITMQ_DEFAULT_USER}:${RABBITMQ_DEFAULT_PASS}@rabbitmq//
       - BRIDGE_CHANNELS=events:amq.topic
+    depends_on:
+      - db
 
   # RabbitMQ instance can be used to consolidate events that originated in your database/application.
   # You can connect here with different consumers and take actions based on those events (like sending signup emails)
