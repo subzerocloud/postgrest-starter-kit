@@ -2,16 +2,16 @@
   "name": "starter-kit",
   "dependencies": {},
   "devDependencies": {
-    "jsonwebtoken": "^8.3.0",
     "babel-core": "^6.24.0",
     "babel-preset-latest": "^6.24.1",
     "dotenv": "4.0.0",
-    "mocha": "^3.2.0",
+    "jsonwebtoken": "^8.3.0",
+    "mocha": "^6.0.2",
     "should": "^11.2.0",
     "supertest": "^3.0.0"
   },
   "scripts": {
-    "test_rest": "mocha --no-timeouts --compilers js:babel-core/register ./tests/rest/",
+    "test_rest": "mocha --no-timeouts --require babel-core/register ./tests/rest/",
     "test_db": "node tests/bin/test_db.js",
     "test": "npm run test_db && npm run test_rest"
   },
