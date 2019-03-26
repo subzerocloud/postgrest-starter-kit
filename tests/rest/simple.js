@@ -1,11 +1,10 @@
-const request = require('supertest');
-const should = require("should");
+import { rest_service } from './common'
 
-describe('root endpoint', function() {
-  it('returns json', function(done) {
-    request('http://localhost:8080/rest')
+describe('root endpoint', function () {
+  it('returns json', function (done) {
+    rest_service()
       .get('/')
       .expect('Content-Type', /json/)
       .expect(200, done)
-  });
-});
+  })
+})
