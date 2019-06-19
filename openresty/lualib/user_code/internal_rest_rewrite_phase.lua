@@ -1,5 +1,5 @@
 -- support /endpoint/:id url style
-local m, err = ngx.re.match(ngx.var.uri, "^/internal/rest/([a-z_]+)/([0-9]+)")
+local m, err = ngx.re.match(ngx.var.uri, "^/([a-z_]+)/([0-9]+)")
 if m then
     ngx.req.set_uri('/' .. m[1])
     local args = ngx.req.get_uri_args()

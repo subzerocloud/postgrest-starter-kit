@@ -5,10 +5,7 @@
 # docker push $REMOTE_REPO:latest
 
 
-FROM openresty/openresty:jessie
+FROM openresty/openresty:stretch
 
-COPY entrypoint.sh /entrypoint.sh
 COPY nginx /usr/local/openresty/nginx
 COPY lualib /usr/local/openresty/lualib
-
-ENTRYPOINT ["/entrypoint.sh"]
