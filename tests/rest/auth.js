@@ -7,18 +7,17 @@ describe('auth', function () {
 
   it('login', function (done) {
     rest_service()
-      .post('/rpc/login?select=me,token')
+      .post('/rpc/login')
       .set('Accept', 'application/vnd.pgrst.object+json')
       .send({
         email: 'alice@email.com',
         password: 'pass'
       })
       .expect('Content-Type', /json/)
-      .expect(200, done)
       .expect(r => {
-        // console.log(r.body)
+        //console.log(r.body)
         r.body.me.email.should.equal('alice@email.com')
-      })
+      }).expect(200, done)
   })
 
   it('me', function (done) {
@@ -28,11 +27,10 @@ describe('auth', function () {
       .withRole('webuser')
       .send({})
       .expect('Content-Type', /json/)
-      .expect(200, done)
       .expect(r => {
-        // console.log(r.body)
+        //console.log(r.body)
         r.body.email.should.equal('alice@email.com')
-      })
+      }).expect(200, done)
   })
 
   it('refresh_token', function (done) {
@@ -42,11 +40,10 @@ describe('auth', function () {
       .withRole('webuser')
       .send({})
       .expect('Content-Type', /json/)
-      .expect(200, done)
       .expect(r => {
-        // console.log(r.body)
+        //console.log(r.body)
         r.body.length.should.above(0)
-      })
+      }).expect(200, done)
   })
 
   it('signup', function (done) {
@@ -59,10 +56,10 @@ describe('auth', function () {
         password: 'pass'
       })
       .expect('Content-Type', /json/)
-      .expect(200, done)
+      
       .expect(r => {
-        // console.log(r.body)
+        //console.log(r.body)
         r.body.me.email.should.equal('john@email.com')
-      })
+      }).expect(200, done)
   })
 })

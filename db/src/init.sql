@@ -15,21 +15,21 @@ set client_min_messages to warning;
 
 \echo # Loading database definition
 begin;
+create extension if not exists pgcrypto;
 
 \echo # Loading dependencies
 -- functions for storing different settins in a table
 \ir libs/settings/schema.sql
--- functions implementing authentication (parts of the lib are included in data and api schema)
-\ir libs/auth/schema.sql
 -- functions for reading different http request properties exposed by PostgREST
 \ir libs/request/schema.sql
 -- functions for sending messages to RabbitMQ entities
 \ir libs/rabbitmq/schema.sql
+-- functions for JWT token generation in the database context
+\ir libs/pgjwt/schema.sql
 
--- save app settings
+-- save app settings (they are storred in the settings.secrets table)
 select settings.set('jwt_secret', :quoted_jwt_secret);
 select settings.set('jwt_lifetime', '3600');
-select settings.set('auth.default-role', 'webuser');
 
 
 \echo # Loading application definitions

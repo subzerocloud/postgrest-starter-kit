@@ -12,6 +12,6 @@ create table todo (
 -- on_row_change('{"include":["id"]}'::json) - send only the listed columns
 -- on_row_change('{"exclude":["bigcolumn"]}'::json) - exclude listed columns from the payload
 
-create trigger send_change_event
+create trigger send_todo_change_event
 after insert or update or delete on todo
 for each row execute procedure rabbitmq.on_row_change('{"include":["id","todo"]}');

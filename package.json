@@ -6,7 +6,7 @@
     "babel-preset-latest": "^6.24.1",
     "dotenv": "4.0.0",
     "jsonwebtoken": "^8.3.0",
-    "mocha": "^6.0.2",
+    "mocha": "^6.2.0",
     "should": "^11.2.0",
     "supertest": "^3.0.0"
   },
