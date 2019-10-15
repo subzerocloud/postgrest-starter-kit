@@ -1,4 +1,3 @@
-\echo # Loading settings schema
 drop schema if exists settings cascade;
 create schema settings;
 

@@ -18,14 +18,18 @@ begin;
 create extension if not exists pgcrypto;
 
 \echo # Loading dependencies
+
 -- functions for storing different settins in a table
-\ir libs/settings/schema.sql
+\ir libs/settings.sql
+
 -- functions for reading different http request properties exposed by PostgREST
-\ir libs/request/schema.sql
+\ir libs/request.sql
+
 -- functions for sending messages to RabbitMQ entities
-\ir libs/rabbitmq/schema.sql
+\ir libs/rabbitmq.sql
+
 -- functions for JWT token generation in the database context
-\ir libs/pgjwt/schema.sql
+\ir libs/pgjwt.sql
 
 -- save app settings (they are storred in the settings.secrets table)
 select settings.set('jwt_secret', :quoted_jwt_secret);
@@ -33,10 +37,12 @@ select settings.set('jwt_lifetime', '3600');
 
 
 \echo # Loading application definitions
+
 -- private schema where all tables will be defined
 -- you can use othere names besides "data" or even spread the tables
 -- between different schemas. The schema name "data" is just a convention
 \ir data/schema.sql
+
 -- entities inside this schema (which should be only views and stored procedures) will be 
 -- exposed as API endpoints. Access to them however is still governed by the 
 -- privileges defined for the current PostgreSQL role making the requests
