@@ -13,9 +13,9 @@ PostgREST enables a different way of building data driven API backends. It does 
 Run your PostgREST instance in [subZero cloud](https://subzero.cloud/postgrest-plus.html) and get additional features to the OS version ( [free plan](https://subzero.cloud/pricing.html) available). ALternatively, deploy an [enhanced version](https://docs.subzero.cloud/postgrest-plus/) of PostgREST on your infrastructure using binary and docker distributions.
 
 ✓ **Fully Managed** &mdash; subZero automates every part of setup, running and scaling of PostgREST. Let your team focus on what they do best - building your product. Leave PostgREST management and monitoring to the experts.<br>
-✓ **Faster Queries** &mdash; Run an enhanced PostgREST version that uses prepared statements instead of inline queries. This results in up to 30% faster response times.<br>
+✓ **Faster Queries** &mdash; Run an [enhanced PostgREST](https://docs.subzero.cloud/postgrest-plus/) version that uses prepared statements instead of inline queries. This results in up to 30% faster response times.<br>
+✓ **Custom Relations** &mdash; Define [custom relations](https://docs.subzero.cloud/postgrest-plus/) when automatic detection does not work. This allows you to use the powerful embedding feature even with the most complicated views<br>
 ✓ **GraphQL API** &mdash; In addition to the REST API you get a GraphQL api with no additional coding. Leverage all the powerful tooling, libraries and integrations for GraphQL in your frontend.<br>
-✓ **PostgREST+** &mdash; [Enhanced version](https://docs.subzero.cloud/postgrest-plus/) of PostgREST that generates prepared statements and supports custom relations
 
 ## Features
 
