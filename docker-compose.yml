@@ -74,10 +74,9 @@ services:
       - DB_USER=${DB_USER}
       - DB_PASS=${DB_PASS}
     volumes:
-      - "./openresty/nginx/conf/nginx.conf:/usr/local/openresty/nginx/conf/nginx.conf"
-      - "./openresty/nginx/conf/includes:/usr/local/openresty/nginx/conf/includes"
-      - "./openresty/nginx/html:/usr/local/openresty/nginx/html"
-      - "./openresty/lualib/user_code:/usr/local/openresty/lualib/user_code"
+      - "./openresty/nginx.conf:/usr/local/openresty/nginx/conf/nginx.conf"
+      - "./openresty/html:/usr/local/openresty/nginx/html"
+      - "./openresty/lua:/usr/local/openresty/lualib/user_code"
     depends_on:
       - postgrest
 

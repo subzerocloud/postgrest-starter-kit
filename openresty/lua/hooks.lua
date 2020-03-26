@@ -1,3 +1,6 @@
+local utils = require 'utils'
+local cjson = require 'cjson'
+
 local function on_init()
     -- print "on_init called"
 end
@@ -8,6 +11,13 @@ end
 
 local function before_rest_response()
     -- print "before_rest_response called"
+    -- postprocess response
+    -- utils.set_body_postprocess_mode(utils.postprocess_modes.ALL)
+    -- utils.set_body_postprocess_fn(function(body)
+    --     local b = cjson.decode(body)
+    --     b.custom_key = 'custom_value'
+    --     return cjson.encode(b)
+    -- end)
 end
 
 return {
