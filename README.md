@@ -116,13 +116,6 @@ npm run test_db                 # Run pgTAP tests
 npm run test_rest               # Run integration tests
 ```
 
-
-## Deployment
-* [subZero Cloud](http://docs.subzero.cloud/production-infrastructure/subzero-cloud/)
-* [Amazon ECS+RDS](http://docs.subzero.cloud/production-infrastructure/aws-ecs-rds/)
-* [Amazon Fargate+RDS](http://docs.subzero.cloud/production-infrastructure/aws-fargate-rds/)
-* [Dedicated Linux Server](https://docs.subzero.cloud/production-infrastructure/ubuntu-server/)
-
 ## Contributing
 
 Anyone and everyone is welcome to contribute.
