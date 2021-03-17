@@ -69,29 +69,23 @@ Alternatively, deploy an [enhanced version](https://docs.subzero.cloud/postgrest
 ### Prerequisites
 * [Docker](https://www.docker.com)
 * [Node.js](https://nodejs.org/en/)
-* [subZero CLI](https://github.com/subzerocloud/subzero-cli#install)
+* [subzero-cli](https://github.com/subzerocloud/subzero-cli#install)
 
 ### Create a New Project
-subzero-cli provides you with a `base-project` command that lets you create a new project structure:
+Click **[Use this template]** (green) button.
+Choose the name of your new repository, description and public/private state then click **[Create repository from template]** button.
+Check out the [step by step guide](https://docs.github.com/en/github/creating-cloning-and-archiving-repositories/creating-a-repository-from-a-template) if you encounter any problems.
 
-```bash
-subzero base-project
-
-? Enter the directory path where you want to create the project .
-? Choose the starter kit (Use arrow keys)
-  subzero-starter-kit (REST & GraphQL) 
-❯ postgrest-starter-kit (REST) 
-```
-
-After the files have been created, you can bring up your application (API).
+After this, clone the newly created repository to your computer.
 In the root folder of application, run the docker-compose command
 
 ```bash
 docker-compose up -d
 ```
 
-The API server will become available at the following endpoint:
+The API server will become available at the following endpoints:
 
+- Frontend [http://localhost:8080/](http://localhost:8080/)
 - REST [http://localhost:8080/rest/](http://localhost:8080/rest/)
 
 Try a simple request
@@ -99,7 +93,6 @@ Try a simple request
 ```bash
 curl http://localhost:8080/rest/todos?select=id,todo
 ```
-
 
 ## Development workflow and debugging
 
