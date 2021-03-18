@@ -1,0 +1,246 @@
+# This CircleCI config requires the following env vars to be configured
+# AWS keys (to push images and trigger stack update)
+# see "AWS Permissions" section in your CircleCI project configuration section
+
+# OPENRESTY_REPO_URI - repo uri, do not include version tag
+# example: 0000000000.dkr.ecr.us-east-1.amazonaws.com/myapplication/openresty
+# COMPOSE_PROJECT_NAME - the name of your project, used to determine the name of your stack
+
+# Production database connection info
+# AWS_REGION - region where you ECS cluster is located (ex: us-east-1)
+# SUPER_USER - your database admin user
+# PRODUCTION_SUPER_USER_PASSWORD - password for the database admin user
+# PRODUCTION_DB_HOST - host uri (ex: myapplication-db.zzzzzzzzz.us-east-1.rds.amazonaws.com:5432)
+# DB_NAME - database name
+# PRODUCTION_DB_SECURITY_GROUP - AWS security group id that the db is in
+#
+# If you deploy on subzero.cloud you'll need this env vars
+# SUBZERO_CLOUD_USER - your subzero.cloud user
+# SUBZERO_CLOUD_PASSWORD - your subzero.cloud password
+
+version: 2
+jobs:
+  pull_docker_images:
+    machine:
+      enabled: true
+    steps:
+      - restore_cache:
+          keys:
+          - v2-docker-images
+      - run:
+          name: docker pull & save
+          command: |
+            if [ ! -f ~/.docker/images.tar ]; then
+              docker pull postgres
+              docker pull subzerocloud/postgrest
+              docker pull openresty/openresty:jessie
+              docker pull lren/pgtap
+              docker pull subzerocloud/subzero-cli-tools
+              # docker pull subzerocloud/pg-amqp-bridge
+              # docker pull rabbitmq:3-management
+              mkdir -p ~/.docker
+              docker save --output ~/.docker/images.tar \
+                postgres \
+                subzerocloud/postgrest \
+                openresty/openresty:jessie \
+                lren/pgtap \
+                subzerocloud/subzero-cli-tools
+                # subzerocloud/pg-amqp-bridge \
+                # rabbitmq:3-management \
+            fi
+      - save_cache:
+          paths:
+            - ~/.docker
+          key: v2-docker-images
+
+  install_npm_dependencies:
+    docker:
+      - image: circleci/node:latest
+    steps:
+      - checkout
+      - restore_cache:
+          keys:
+          - v2-npm-dependencies-{{ checksum "package.json" }}
+      - run: npm install
+      - save_cache:
+          paths:
+            - node_modules
+          key: v2-npm-dependencies-{{ checksum "package.json" }}
+
+  test:
+    machine:
+      enabled: true
+    steps:
+      - checkout
+      - restore_cache:
+          keys:
+          - v2-docker-images
+      - restore_cache:
+          keys:
+          - v2-npm-dependencies-{{ checksum "package.json" }}
+      - run:
+          name: load cached docker images
+          command: docker load --input ~/.docker/images.tar
+
+      - run:
+         name: bring up application stack
+         command: docker-compose up -d db postgrest openresty && sleep 15
+
+      - run:
+          name: run tests
+          command: npm test
+
+  deploy-aws-ecs:
+    machine:
+      enabled: true
+    steps:
+      - checkout
+      - restore_cache:
+          keys:
+          - v2-docker-images
+      - run:
+          name: install subzero-cli
+          command: npm install -g subzero-cli
+      - deploy:
+          name: deploy the openresty image and latest database migrations
+          command: |
+            aws ecr get-login --region $AWS_REGION --no-include-email | sh
+            # temporatily whitelist CircleCI ip
+            public_ip_address=$(wget -qO- http://checkip.amazonaws.com)
+            echo "this computers public ip address is $public_ip_address"
+            aws ec2 authorize-security-group-ingress \
+              --region $AWS_REGION \
+              --group-id $PRODUCTION_DB_SECURITY_GROUP \
+              --protocol tcp \
+              --port 5432 \
+              --cidr ${public_ip_address}/32
+            sleep 5
+            subzero cloud app-deploy --dba $SUPER_USER --password $PRODUCTION_SUPER_USER_PASSWORD
+            aws ec2 revoke-security-group-ingress \
+              --region $AWS_REGION \
+              --group-id $PRODUCTION_DB_SECURITY_GROUP \
+              --protocol tcp \
+              --port 5432 \
+              --cidr ${public_ip_address}/32
+      - deploy:
+          name: trigger ECS service update
+          command: |
+            aws cloudformation update-stack \
+              --region $AWS_REGION \
+              --stack-name $COMPOSE_PROJECT_NAME \
+              --capabilities CAPABILITY_IAM \
+              --use-previous-template \
+              --parameters \
+                ParameterKey=ClusterName,UsePreviousValue=true \
+                ParameterKey=DesiredCount,ParameterValue=1 \
+                ParameterKey=Version,ParameterValue=$CIRCLE_TAG \
+                ParameterKey=OpenRestyImage,UsePreviousValue=true \
+                ParameterKey=ListenerHostNamePattern,UsePreviousValue=true \
+                ParameterKey=HasHttpsListener,UsePreviousValue=true \
+                ParameterKey=DbHost,UsePreviousValue=true \
+                ParameterKey=DbPassword,UsePreviousValue=true \
+                ParameterKey=JwtSecret,UsePreviousValue=true
+                # uncomment the lines below if you changed default values when you created the stack
+                # ParameterKey=PostgrestImage,UsePreviousValue=true \
+                # ParameterKey=DbPort,UsePreviousValue=true \
+                # ParameterKey=DbName,UsePreviousValue=true \
+                # ParameterKey=DbSchema,UsePreviousValue=true \
+                # ParameterKey=DbUser,UsePreviousValue=true \
+                # ParameterKey=DbAnonRole,UsePreviousValue=true \
+                # ParameterKey=DbPool,UsePreviousValue=true \
+                # ParameterKey=MaxRows,UsePreviousValue=true \
+                # ParameterKey=PreRequest,UsePreviousValue=true \
+
+  deploy-subzero-cloud:
+    machine:
+      enabled: true
+    steps:
+      - restore_cache:
+          keys:
+          - v2-docker-images
+      - checkout
+      - run:
+          name: install subzero-cli
+          command: npm install -g subzero-cli
+      - deploy:
+          name: deploy the openresty image and latest database migrations
+          command: |
+            subzero cloud login --email $SUBZERO_CLOUD_USER --password $SUBZERO_CLOUD_PASSWORD
+            subzero cloud app-deploy --dba $SUPER_USER --password $PRODUCTION_SUPER_USER_PASSWORD
+
+  deploy-ubuntu-server:
+    machine:
+      enabled: true
+    steps:
+      - restore_cache:
+          keys:
+          - v3-docker-images
+      - checkout
+      - run:
+          name: install subzero-cli
+          command: npm install -g subzero-cli
+      - deploy:
+          name: deploy the latest database migrations
+          command: |
+            subzero cloud app-deploy --dba $SUPER_USER --password $PRODUCTION_SUPER_USER_PASSWORD
+      - deploy:
+          name: deploy openresty config and lua files
+          command: |
+             scp openresty/nginx/conf/nginx.conf ubuntu@$PRODUCTION_DB_HOST:/tmp
+             scp -r openresty/nginx/conf/includes ubuntu@$PRODUCTION_DB_HOST:/tmp
+             scp -r openresty/nginx/html ubuntu@$PRODUCTION_DB_HOST:/tmp
+             scp -r openresty/lualib/user_code ubuntu@$PRODUCTION_DB_HOST:/tmp
+
+             ssh -q ubuntu@$PRODUCTION_DB_HOST <<EOF
+               sudo su
+               mv /tmp/nginx.conf /usr/local/openresty/nginx/conf/nginx.conf
+               mkdir -p /usr/local/openresty/nginx/conf/includes/ && mv /tmp/includes/* /usr/local/openresty/nginx/conf/includes/
+               mv /tmp/html/* /usr/local/openresty/nginx/html/
+               mkdir -p /usr/local/openresty/lualib/user_code/ && mv /tmp/user_code/* /usr/local/openresty/lualib/user_code/
+               systemctl reload openresty
+             EOF
+
+workflows:
+  version: 2
+  build-and-deploy:
+    jobs:
+      - pull_docker_images:
+          filters:
+            tags:
+              only: /v[0-9]+(\.[0-9]+)*/
+      - install_npm_dependencies:
+          filters:
+            tags:
+              only: /v[0-9]+(\.[0-9]+)*/
+      - test:
+          filters:
+            tags:
+              only: /v[0-9]+(\.[0-9]+)*/
+          requires:
+            - pull_docker_images
+            - install_npm_dependencies
+      # Uncomment according to deploy target
+      #- deploy-subzero-cloud:
+          #requires:
+            #- test
+          #filters:
+            #tags:
+              #only: /v[0-9]+(\.[0-9]+)*/
+            #branches:
+              #ignore: /.*/
+      #- deploy-aws-ecs:
+          #requires:
+            #- test
+          #filters:
+            #tags:
+              #only: /v[0-9]+(\.[0-9]+)*/
+            #branches:
+              #ignore: /.*/
+      #- deploy-ubuntu-server:
+          #requires:
+            #- test
+          #filters:
+            #tags:
+              #only: /v[0-9]+(\.[0-9]+)*/
+            #branches:
+              #ignore: /.*/
